@@ -11,7 +11,6 @@
         NSOpenGLContext plain C wrapper implementation
 */
 
-
 #import "contextwrapper.h"
 #import <Cocoa/Cocoa.h>
 
@@ -69,6 +68,7 @@ void cw_destroy(struct NSContextObject *context)
                                                     name: NSViewGlobalFrameDidChangeNotification
                                                   object: ctx.view];
 
+    [ctx clearDrawable];
     [NSOpenGLContext clearCurrentContext];
     [ctx release];
 }
