@@ -74,8 +74,13 @@ GSbool xGSTextureImpl::allocate(const GStexturedescription &desc)
     p_depth = desc.depth;
     p_layers = desc.layers;
     p_multisample = desc.multisample;
-    p_minlevel = desc.minlevel;
-    p_maxlevel = desc.maxlevel;
+    if (p_texturetype == GS_TEXTYPE_RECT) {
+        p_minlevel = 0;
+        p_maxlevel = 0;
+    } else {
+        p_minlevel = desc.minlevel;
+        p_maxlevel = desc.maxlevel;
+    }
 
     xGSImpl::TextureFormatDescriptor texdesc;
     if (!p_owner->GetTextureFormatDescriptor(p_format, texdesc)) {
@@ -103,7 +108,7 @@ GSbool xGSTextureImpl::allocate(const GStexturedescription &desc)
         glTexParameteri(p_target, GL_TEXTURE_BASE_LEVEL, p_minlevel);
         glTexParameteri(p_target, GL_TEXTURE_MAX_LEVEL, p_maxlevel);
 
-        SetImage(p_target, (p_maxlevel - p_minlevel) > 0);
+        SetImage(p_target, (p_maxlevel - p_minlevel) > 0 && p_texturetype != GS_TEXTYPE_RECT);
     }
 
     return p_owner->error(GS_OK);
@@ -297,132 +302,67 @@ void xGSTextureImpl::SetImage(GLenum gltarget, bool mipcascade)
 
 void xGSTextureImpl::SetImage1D(bool mipcascade)
 {
-    if (glTexStorage1D) {
-        GSuint levels = 1;
+#ifdef GS_CONFIG_TEXTURE_STORAGE
+    GSuint levels = 1;
 
-        if (mipcascade) {
-            int width = p_width;
-            while (width > 1 && levels <= p_maxlevel) {
-                width = width >> 1;
-                ++levels;
-            }
-        }
-
-        glTexStorage1D(GL_TEXTURE_1D, levels - p_minlevel, p_GLIntFormat, p_width);
-    } else {
-        glTexImage1D(
-            GL_TEXTURE_1D, p_minlevel, p_GLIntFormat,
-            p_width >> p_minlevel, 0, p_GLFormat, p_GLType, nullptr
-        );
-
-        if (mipcascade) {
-            int width = p_width >> p_minlevel;
-            GSuint level = p_minlevel;
-            do {
-                width = width >> 1;
-                ++level;
-                glTexImage1D(
-                    GL_TEXTURE_1D, level, p_GLIntFormat,
-                    width, 0, p_GLFormat, p_GLType, nullptr
-                );
-            } while (width > 0 && level < p_maxlevel);
+    if (mipcascade) {
+        int width = p_width;
+        while (width > 1 && levels <= p_maxlevel) {
+            width = width >> 1;
+            ++levels;
         }
     }
+
+    glTexStorage1D(GL_TEXTURE_1D, levels - p_minlevel, p_GLIntFormat, p_width);
+#else
+    glTexImage1D(
+        GL_TEXTURE_1D, p_minlevel, p_GLIntFormat,
+        p_width >> p_minlevel, 0, p_GLFormat, p_GLType, nullptr
+    );
+
+    if (mipcascade) {
+        int width = p_width >> p_minlevel;
+        GSuint level = p_minlevel;
+        do {
+            width = width >> 1;
+            ++level;
+            glTexImage1D(
+                GL_TEXTURE_1D, level, p_GLIntFormat,
+                width, 0, p_GLFormat, p_GLType, nullptr
+            );
+        } while (width > 0 && level < p_maxlevel);
+    }
+#endif
 }
 
 void xGSTextureImpl::SetImage2D(GLenum gltarget, bool mipcascade)
 {
-    if (glTexStorage2D) {
-        int levels = 1;
+#ifdef GS_CONFIG_TEXTURE_STORAGE
+    int levels = 1;
 
-        if (mipcascade) {
-            int width = p_width;
-            int height = p_height;
-            while (width > 1 || height > 1) {
-                width = width >> 1;
-                height = height >> 1;
-                ++levels;
-            }
-        }
-
-        glTexStorage2D(gltarget, levels, p_GLIntFormat, p_width, p_height);
-    } else {
-        if (gltarget == GL_TEXTURE_CUBE_MAP) {
-            SetImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_X, mipcascade);
-            SetImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X, mipcascade);
-            SetImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, mipcascade);
-            SetImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Y, mipcascade);
-            SetImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, mipcascade);
-            SetImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Z, mipcascade);
-        } else {
-            glTexImage2D(
-                gltarget, 0, p_GLIntFormat,
-                p_width, p_height, 0, p_GLFormat, p_GLType, nullptr
-            );
-
-            if (mipcascade) {
-                int width = p_width;
-                int height = p_height;
-                int level = 0;
-                do {
-                    width = width >> 1;
-                    height = height >> 1;
-                    ++level;
-                    glTexImage2D(
-                        gltarget, level, p_GLIntFormat,
-                        c_util::umax(width, 1), c_util::umax(height, 1),
-                        0, p_GLFormat, p_GLType, nullptr
-                    );
-                } while (width > 1 && height > 1);
-            }
+    if (mipcascade) {
+        int width = p_width;
+        int height = p_height;
+        while (width > 1 || height > 1) {
+            width = width >> 1;
+            height = height >> 1;
+            ++levels;
         }
     }
-}
 
-void xGSTextureImpl::SetImage2DMultisample(bool mipcascade)
-{
-    if (glTexStorage2DMultisample && 0) {
-        glTexStorage2DMultisample(
-            GL_TEXTURE_2D_MULTISAMPLE, p_multisample, p_GLIntFormat,
-            p_width, p_height, GL_TRUE
-        );
+    glTexStorage2D(gltarget, levels, p_GLIntFormat, p_width, p_height);
+#else
+    if (gltarget == GL_TEXTURE_CUBE_MAP) {
+        SetImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_X, mipcascade);
+        SetImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X, mipcascade);
+        SetImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, mipcascade);
+        SetImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Y, mipcascade);
+        SetImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, mipcascade);
+        SetImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Z, mipcascade);
     } else {
-        glTexImage2DMultisample(
-            GL_TEXTURE_2D_MULTISAMPLE, p_multisample, p_GLIntFormat,
-            p_width, p_height, GL_TRUE
-        );
-    }
-}
-
-void xGSTextureImpl::SetImage3D(GLenum gltarget, bool mipcascade)
-{
-    int depth = gltarget == GL_TEXTURE_2D_ARRAY ? p_layers : p_depth;
-
-    if (glTexStorage3D) {
-        int levels = 1;
-
-        if (mipcascade) {
-            int width = p_width;
-            int height = p_height;
-            while (width > 1 || height > 1 || depth > 1) {
-                width = width >> 1;
-                height = height >> 1;
-
-                if (gltarget == GL_TEXTURE_3D) {
-                    depth = depth >> 1;
-                } else if (width <= 0 && height <= 0) {
-                    break;
-                }
-
-                ++levels;
-            }
-        }
-
-        glTexStorage3D(gltarget, levels, p_GLIntFormat, p_width, p_height, depth);
-    } else {
-        glTexImage3D(
+        glTexImage2D(
             gltarget, 0, p_GLIntFormat,
-            p_width, p_height, depth, 0, p_GLFormat, p_GLType, nullptr
+            p_width, p_height, 0, p_GLFormat, p_GLType, nullptr
         );
 
         if (mipcascade) {
@@ -432,23 +372,87 @@ void xGSTextureImpl::SetImage3D(GLenum gltarget, bool mipcascade)
             do {
                 width = width >> 1;
                 height = height >> 1;
-
-                if (gltarget == GL_TEXTURE_3D) {
-                    depth = depth >> 1;
-                } else if (width <= 0 && height <= 0) {
-                    break;
-                }
-
-
                 ++level;
-                glTexImage3D(
+                glTexImage2D(
                     gltarget, level, p_GLIntFormat,
-                    umax(width, 1), umax(height, 1), umax(depth, 1),
+                    c_util::umax(width, 1), c_util::umax(height, 1),
                     0, p_GLFormat, p_GLType, nullptr
                 );
-            } while (width > 0 || height > 0 || depth > 0);
+            } while (width > 1 && height > 1);
         }
     }
+#endif
+}
+
+void xGSTextureImpl::SetImage2DMultisample(bool mipcascade)
+{
+#ifdef GS_CONFIG_TEXTURE_STORAGE_MULTISAMPLE
+    glTexStorage2DMultisample(
+        GL_TEXTURE_2D_MULTISAMPLE, p_multisample, p_GLIntFormat,
+        p_width, p_height, GL_TRUE
+    );
+#else
+    glTexImage2DMultisample(
+        GL_TEXTURE_2D_MULTISAMPLE, p_multisample, p_GLIntFormat,
+        p_width, p_height, GL_TRUE
+    );
+#endif
+}
+
+void xGSTextureImpl::SetImage3D(GLenum gltarget, bool mipcascade)
+{
+    int depth = gltarget == GL_TEXTURE_2D_ARRAY ? p_layers : p_depth;
+
+#ifdef GS_CONFIG_TEXTURE_STORAGE
+    int levels = 1;
+
+    if (mipcascade) {
+        int width = p_width;
+        int height = p_height;
+        while (width > 1 || height > 1 || depth > 1) {
+            width = width >> 1;
+            height = height >> 1;
+
+            if (gltarget == GL_TEXTURE_3D) {
+                depth = depth >> 1;
+            } else if (width <= 0 && height <= 0) {
+                break;
+            }
+
+            ++levels;
+        }
+    }
+
+    glTexStorage3D(gltarget, levels, p_GLIntFormat, p_width, p_height, depth);
+#else
+    glTexImage3D(
+        gltarget, 0, p_GLIntFormat,
+        p_width, p_height, depth, 0, p_GLFormat, p_GLType, nullptr
+    );
+
+    if (mipcascade) {
+        int width = p_width;
+        int height = p_height;
+        int level = 0;
+        do {
+            width = width >> 1;
+            height = height >> 1;
+
+            if (gltarget == GL_TEXTURE_3D) {
+                depth = depth >> 1;
+            } else if (width <= 0 && height <= 0) {
+                break;
+            }
+
+            ++level;
+            glTexImage3D(
+                gltarget, level, p_GLIntFormat,
+                umax(width, 1), umax(height, 1), umax(depth, 1),
+                0, p_GLFormat, p_GLType, nullptr
+            );
+        } while (width > 0 || height > 0 || depth > 0);
+    }
+#endif
 }
 
 void xGSTextureImpl::UpdateImage(GLenum gltarget, int level, GSptr data)

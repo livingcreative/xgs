@@ -13,15 +13,22 @@
 
 #pragma once
 
+#ifdef WIN32
+    #define INTERFACECALL __stdcall
+#endif
+
+#ifdef __APPLE__
+    #define INTERFACECALL
+#endif
 
 class IUnknownStub
 {
 public:
-    virtual unsigned int __stdcall QueryInterface(void *riid, void **ppvObject)
+    virtual unsigned int INTERFACECALL QueryInterface(void *riid, void **ppvObject)
     {
         return /*E_NOTIMPL*/ 0x80004001L;
     }
 
-    virtual unsigned int __stdcall AddRef() = 0;
-    virtual unsigned int __stdcall Release() = 0;
+    virtual unsigned int INTERFACECALL AddRef() = 0;
+    virtual unsigned int INTERFACECALL Release() = 0;
 };

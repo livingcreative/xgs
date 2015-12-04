@@ -156,7 +156,7 @@ GSerror GSParametersState::allocate(xGSImpl *impl, xGSStateImpl *state, const GS
                 const xGSUniformBufferImpl::UniformBlock &block = buffer->block(binding->block);
 
                 UniformBlockData ub = {
-                    slot.location,
+                    GLuint(slot.location),
                     block.offset + block.size * binding->index, block.size,
                     buffer
                 };

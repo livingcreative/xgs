@@ -469,10 +469,6 @@ void xGSFrameBufferImpl::checkFrameBufferStatus()
             p_owner->debug(DebugMessageLevel::SystemError, "FBO incomplete attachments\n");
             break;
 
-        case GL_FRAMEBUFFER_INCOMPLETE_DIMENSIONS_EXT:
-            p_owner->debug(DebugMessageLevel::SystemError, "FBO incomplete dimentions\n");
-            break;
-
         case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
             p_owner->debug(DebugMessageLevel::SystemError, "FBO incomplete missing attachment\n");
             break;
@@ -480,6 +476,12 @@ void xGSFrameBufferImpl::checkFrameBufferStatus()
         case GL_FRAMEBUFFER_UNSUPPORTED:
             p_owner->debug(DebugMessageLevel::SystemError, "FBO unsupported format combination\n");
             break;
+
+#ifdef GS_CONFIG_FRAMEBUFFER_EXT
+        case GL_FRAMEBUFFER_INCOMPLETE_DIMENSIONS_EXT:
+            p_owner->debug(DebugMessageLevel::SystemError, "FBO incomplete dimentions\n");
+            break;
+#endif
 
         default:
             p_owner->debug(DebugMessageLevel::SystemError, "FBO bind status unknown\n");

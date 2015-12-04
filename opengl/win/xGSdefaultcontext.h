@@ -17,7 +17,8 @@
 #include <windows.h>
 
 
-namespace xGS {
+namespace xGS
+{
 
     // default context data
     class xGSdefaultcontext

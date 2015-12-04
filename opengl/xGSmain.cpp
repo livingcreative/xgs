@@ -13,8 +13,6 @@
 */
 
 #include "xGSimpl.h"
-#include "xGSContextwgl.h"
-
 
 // "unity" build
 #include "xGSutil.cpp"
@@ -27,8 +25,9 @@
 #include "xGSgeometrybuffer.cpp"
 #include "xGSgeometry.cpp"
 #include "xGSframebuffer.cpp"
-#include "xGSdefaultcontext.cpp"
-#include "xGScontextwgl.cpp"
+
+#include "xGScontextplatform.h"
+#include "xGScontextplatform.cpp"
 
 
 using namespace xGS;
@@ -36,7 +35,7 @@ using namespace xGS;
 
 GSbool Create(IxGS *xgs)
 {
-    xGScontextCreatorWGL ccwgl;
-    *xgs = xGSImpl::create(&ccwgl);
+    xGScontextCreatorPlatform cc;
+    *xgs = xGSImpl::create(&cc);
     return *xgs != nullptr;
 }

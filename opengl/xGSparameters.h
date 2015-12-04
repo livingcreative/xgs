@@ -16,7 +16,7 @@
 
 #include "xGSobject.h"
 #include "xGSutil.h"
-#include "GL/glew.h"
+#include "glplatform.h"
 #include <vector>
 
 

@@ -21,18 +21,26 @@
 #include "xGSstate.h"
 #include "xGSinput.h"
 #include "xGSparameters.h"
+#include <cstdlib>
 
 #ifdef _DEBUG
-#include <cstdarg>
-#include <Windows.h>
+    #include <cstdarg>
+
+    #ifdef WIN32
+        #include <Windows.h>
+    #endif
+
+    #ifdef __APPLE__
+        #define CALLBACK
+    #endif
 #endif
 
 
 using namespace xGS;
 
 
-#ifdef _DEBUG
-void __stdcall errorCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar *message, GLvoid *userParam)
+#if defined(_DEBUG) && defined(GS_CONFIG_DEBUG_CALLBACK)
+void CALLBACK errorCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar *message, GLvoid *userParam)
 {
     reinterpret_cast<xGSImpl*>(userParam)->debug(
         DebugMessageLevel::Error, 
@@ -97,7 +105,7 @@ xGSImpl::~xGSImpl()
 
 GSptr xGSImpl::allocate(GSint size)
 {
-#ifdef _DEBUG
+#if defined(_DEBUG) && defined(WIN32)
     dbg_memory_allocs += size;
 #endif
     return malloc(size_t(size));
@@ -105,7 +113,7 @@ GSptr xGSImpl::allocate(GSint size)
 
 void xGSImpl::free(GSptr &memory)
 {
-#ifdef _DEBUG
+#if defined(_DEBUG) && defined(WIN32)
     dbg_memory_allocs -= GSint(_msize(memory));
 #endif
     ::free(memory);
@@ -126,6 +134,16 @@ GSbool xGSImpl::error(GSerror code, DebugMessageLevel level)
     return code == GS_OK;
 }
 
+#ifdef _DEBUG
+    #ifdef WIN32
+        #define DEBUG_PRINT(T) OutputDebugStringA(T)
+    #endif
+
+    #ifdef __APPLE__
+        #define DEBUG_PRINT(T) printf(T)
+    #endif
+#endif
+
 void xGSImpl::debug(DebugMessageLevel level, const char *format, ...)
 {
 #ifdef _DEBUG
@@ -135,27 +153,33 @@ void xGSImpl::debug(DebugMessageLevel level, const char *format, ...)
     if (*format && (*format != '\n')) {
         switch (level) {
             case DebugMessageLevel::Information:
-                OutputDebugStringA("xGS INFO: ");
+                DEBUG_PRINT("xGS INFO: ");
                 break;
 
             case DebugMessageLevel::Warning:
-                OutputDebugStringA("xGS WARNING: ");
+                DEBUG_PRINT("xGS WARNING: ");
                 break;
 
             case DebugMessageLevel::Error:
-                OutputDebugStringA("xGS ERROR: ");
+                DEBUG_PRINT("xGS ERROR: ");
                 break;
 
             case DebugMessageLevel::SystemError:
-                OutputDebugStringA("xGS SYSTEM ERROR: ");
+                DEBUG_PRINT("xGS SYSTEM ERROR: ");
                 break;
         }
     }
 
+#ifdef WIN32
     char buf[4096];
     vsprintf_s(buf, format, args);
 
     OutputDebugStringA(buf);
+#endif
+
+#ifdef __APPLE__
+    vprintf(format, args);
+#endif
 
     va_end(args);
 #endif
@@ -170,10 +194,16 @@ void xGSImpl::debugTrackGLError(const char *text)
             "xGS: OpenGL error %i at %s\n" :
             "xGS: OpenGL error %i\n";
 
+#ifdef WIN32
         char buf[1024];
         sprintf_s(buf, formatstr, error, text);
 
         OutputDebugStringA(buf);
+#endif
+
+#ifdef __APPLE__
+        printf(formatstr, error, text);
+#endif
     }
 }
 #endif
@@ -192,15 +222,40 @@ GSbool xGSImpl::CreateRenderer(const GSrendererdescription &desc)
         return error(p_error);
     }
 
+#ifdef _DEBUG
+    debug(DebugMessageLevel::Information, "GL_VENDOR: %s\n", glGetString(GL_VENDOR));
+    debug(DebugMessageLevel::Information, "GL_VERSION: %s\n", glGetString(GL_VERSION));
+
+#ifdef GS_CONFIG_LIST_EXTENSIONS
+    GLint numexts = 0;
+    glGetIntegerv(GL_NUM_EXTENSIONS, &numexts);
+
+    debug(DebugMessageLevel::Information, "GL_EXTENSIONS (%i):\n", numexts);
+    for (int n = 0; n < numexts; ++n) {
+        const char *cext = reinterpret_cast<const char*>(glGetStringi(GL_EXTENSIONS, n));
+        debug(DebugMessageLevel::Information, "\t%s\n", cext);
+    }
+#endif
+
+#ifdef GS_CONFIG_DEBUG_CALLBACK
+    if (glDebugMessageCallback) {
+        glDebugMessageCallback(errorCallback, this);
+        glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+    }
+#endif
+
+#endif
+
+#if 0
     // check must have extensions
     bool neededexts = 
-        GLEW_ARB_shading_language_100 &&
-        GLEW_ARB_shader_objects &&
-        GLEW_ARB_vertex_array_object &&
-        GLEW_ARB_framebuffer_object &&
-        GLEW_ARB_uniform_buffer_object &&
-        GLEW_ARB_pixel_buffer_object &&
-        GLEW_ARB_sampler_objects;
+        GLEW_ARB_shading_language_100 &&  // core
+        GLEW_ARB_shader_objects &&        // core
+        GLEW_ARB_vertex_array_object &&   // core
+        GLEW_ARB_framebuffer_object &&    // core
+        GLEW_ARB_uniform_buffer_object && // core
+        GLEW_ARB_pixel_buffer_object &&   // core
+        GLEW_ARB_sampler_objects;         // core
 
     // TODO: add must have exts
     //      ARB_draw_elements_base_vertex
@@ -239,36 +294,21 @@ GSbool xGSImpl::CreateRenderer(const GSrendererdescription &desc)
 #endif
         return error(GSE_INCOMPATIBLE);
     }
-
-#ifdef _DEBUG
-    debug(DebugMessageLevel::Information, "GL_VENDOR: %s\n", glGetString(GL_VENDOR));
-    debug(DebugMessageLevel::Information, "GL_VERSION: %s\n", glGetString(GL_VERSION));
-
-    /*
-    GLint numexts = 0;
-    glGetIntegerv(GL_NUM_EXTENSIONS, &numexts);
-
-    debug(DebugMessageLevel::Information, "GL_EXTENSIONS (%i):\n", numexts);
-    for (int n = 0; n < numexts; ++n) {
-        const char *cext = reinterpret_cast<const char*>(glGetStringi(GL_EXTENSIONS, n));
-        debug(DebugMessageLevel::Information, "\t%s\n", cext);
-    }
-    */
-    glDebugMessageCallback(errorCallback, this);
-    glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
 #endif
 
     glGenQueries(1, &p_capturequery);
 
     glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &p_caps.max_active_attribs);
     glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &p_caps.max_texture_units);
-    p_caps.multi_bind = GLEW_ARB_multi_bind != 0;
-    p_caps.multi_blend = GLEW_ARB_draw_buffers_blend != 0;
-    p_caps.vertex_format = GLEW_ARB_vertex_attrib_binding != 0;
-    p_caps.texture_srgb = GLEW_EXT_texture_sRGB != 0;
-    p_caps.texture_float = GLEW_ARB_texture_float != 0;
-    p_caps.texture_depth = GLEW_ARB_depth_texture != 0;
-    p_caps.texture_depthstencil = GLEW_EXT_packed_depth_stencil != 0;
+
+    // TODO: review caps (some are static, not run-time)
+    p_caps.multi_bind           = GS_CAPS_MULTI_BIND;
+    p_caps.multi_blend          = GS_CAPS_MULTI_BLEND;
+    p_caps.vertex_format        = GS_CAPS_VERTEX_FORMAT;
+    p_caps.texture_srgb         = GS_CAPS_TEXTURE_SRGB;
+    p_caps.texture_float        = GS_CAPS_TEXTURE_FLOAT;
+    p_caps.texture_depth        = GS_CAPS_TEXTURE_DEPTH;
+    p_caps.texture_depthstencil = GS_CAPS_TEXTURE_DEPTHSTENCIL;
 
     glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &p_caps.ubo_alignment);
     glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &p_caps.max_ubo_size);
@@ -1234,7 +1274,7 @@ void xGSImpl::DrawImmediatePrimitives(xGSGeometryBufferImpl *buffer)
             glDrawElementsBaseVertex(
                 p.type,
                 p.indexcount, gl_index_type(buffer->indexFormat()),
-                GSptr(index_buffer_size(buffer->indexFormat(), p.firstindex)),
+                reinterpret_cast<GSptr>(index_buffer_size(buffer->indexFormat(), p.firstindex)),
                 p.firstvertex
             );
         }

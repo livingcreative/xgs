@@ -7,8 +7,8 @@
 
     https://github.com/livingcreative/xgs
 
-    xGScontextwgl.h
-        WGL context implementation
+    win/xGScontextplatform.h
+        xGScontextWGL - Windows OpenGL context implementation
 */
 
 #pragma once
@@ -69,7 +69,7 @@ namespace xGS
     };
 
 
-    class xGScontextCreatorWGL : public xGScontextCreator
+    class xGScontextCreatorPlatform : public xGScontextCreator
     {
     public:
         xGScontext* create() override

@@ -19,6 +19,7 @@
 #include "IUnknownImpl.h"
 #include <memory>
 #include <vector>
+#include <string>
 #include <unordered_set>
 #include <unordered_map>
 
@@ -154,7 +155,7 @@ namespace xGS
         {
 #ifdef _DEBUG
             if (list.size()) {
-                debug(DebugMessageLevel::Warning, "Not all resources released in list %s at renderer destruction", listname.c_str());
+                debug(DebugMessageLevel::Warning, "Not all resources released in list %s ar renderer destroy", listname.c_str());
 #ifdef _MSC_VER
                 _CrtDbgBreak();
 #endif

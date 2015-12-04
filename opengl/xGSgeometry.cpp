@@ -199,19 +199,23 @@ GSptr xGSGeometryImpl::Lock(GSenum locktype, GSdword access, void *lockdata)
         return nullptr;
     }
 
-    // lock entire buffer
-    // TODO: lock part of a buffer, if MapBufferRange is available
     switch (locktype) {
         case GS_LOCK_VERTEXDATA:
             p_locktype = locktype;
-            p_lockpointer = p_buffer ?
-                ptr_offset(p_buffer->lock(locktype), GSint(p_vertexmemory)) : p_vertexmemory;
+            p_lockpointer = p_buffer->lock(
+                locktype,
+                size_t(p_vertexmemory),
+                p_buffer->vertexDecl().buffer_size(p_vertexcount)
+            );
             break;
 
         case GS_LOCK_INDEXDATA:
             p_locktype = locktype;
-            p_lockpointer = p_buffer ?
-                ptr_offset(p_buffer->lock(locktype), GSint(p_indexmemory)) : p_indexmemory;
+            p_lockpointer = p_buffer->lock(
+                locktype,
+                size_t(p_indexmemory),
+                index_buffer_size(p_indexformat, p_indexcount)
+            );
             break;
 
         default:

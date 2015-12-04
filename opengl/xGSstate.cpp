@@ -289,13 +289,13 @@ GSbool xGSStateImpl::allocate(const GSstatedescription &desc)
         glBindVertexArray(p_vao);
 
         if (p_owner->caps().vertex_format) {
+#ifdef GS_CONFIG_SEPARATE_VERTEX_FORMAT
             // If separate vertex format is available, one VAO used
             // per state. Static input buffers bound inside VAO, dynamic buffers
             // are not bound and left for Input object
 
             // If no separate vertex format available - static buffer binding goes
             // into every Input object created for this state
-
             GLuint binding = 0;
             for (auto &is : p_input) {
                 setformat(is.decl, binding, is.divisor);
@@ -307,6 +307,7 @@ GSbool xGSStateImpl::allocate(const GSstatedescription &desc)
                 }
                 ++binding;
             }
+#endif
         } else {
             // but if all input slots are static, VAO built here to attach input buffers
             for (auto &is : p_input) {
@@ -404,7 +405,7 @@ void xGSStateImpl::setarrays(const GSvertexdecl &decl, GSuint divisor, GSptr ver
 
 void xGSStateImpl::setformat(const GSvertexdecl &decl, GSuint binding, GSuint divisor) const
 {
-    GSint stride = decl.buffer_size();
+#ifdef GS_CONFIG_SEPARATE_VERTEX_FORMAT
     GSint offset = 0;
 
     for (auto const &i : decl.declaration())
@@ -420,6 +421,7 @@ void xGSStateImpl::setformat(const GSvertexdecl &decl, GSuint binding, GSuint di
     }
 
     glVertexBindingDivisor(binding, divisor);
+#endif
 }
 
 void xGSStateImpl::apply(const GScaps &caps)

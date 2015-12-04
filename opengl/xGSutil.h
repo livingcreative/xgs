@@ -14,7 +14,7 @@
 #pragma once
 
 #include "xGS/xGS.h"
-#include "GL/glew.h"
+#include "glplatform.h"
 #include <vector>
 
 

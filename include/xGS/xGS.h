@@ -15,10 +15,14 @@
 
 #include "IUnknown.h"
 #include "InterfaceReference.h"
-
+#include <stddef.h>
 
 #ifdef WIN32
     #define xGSAPI __stdcall
+#endif
+
+#ifdef __APPLE__
+    #define xGSAPI
 #endif
 
 
@@ -34,8 +38,8 @@ typedef int          GSenum;
 typedef float        GSfloat;
 typedef void*        GSptr;
 
-typedef unsigned int GShandle;
-typedef unsigned int GSwidget;
+typedef void*        GShandle;
+typedef void*        GSwidget;
 
 
 struct GSsize
@@ -580,7 +584,6 @@ typedef InterfacePtr<IxGSParameters>     IxGSParametersRef;
 //      default render target. If some of buffer's surfaces not needed - format value should
 //      be set to GS_NONE
 //
-//      TODO: change bits fileds to format values instead of bits number
 struct GSrendererdescription
 {
     GSwidget widget;        // windowing system handle
@@ -1315,11 +1318,12 @@ public:
     virtual GSbool xGSAPI Display() = 0;
 
     virtual GSbool xGSAPI SetRenderTarget(IxGSFrameBuffer rendertarget) = 0;
-    virtual GSbool xGSAPI SetViewport(const GSrect &viewport) = 0;
+
     virtual GSbool xGSAPI SetState(IxGSState state) = 0;
     virtual GSbool xGSAPI SetInput(IxGSInput input) = 0;
     virtual GSbool xGSAPI SetParameters(IxGSParameters parameters) = 0;
 
+    virtual GSbool xGSAPI SetViewport(const GSrect &viewport) = 0;
     virtual GSbool xGSAPI SetStencilReference(GSuint ref) = 0;
     virtual GSbool xGSAPI SetBlendColor(const GScolor &color) = 0;
     virtual GSbool xGSAPI SetUniformValue(GSenum set, GSenum slot, GSenum type, const void *value) = 0;

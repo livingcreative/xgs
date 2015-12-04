@@ -19,7 +19,7 @@
 #include "xGSobject.h"
 #include "xGSparameters.h"
 #include "xGSutil.h"
-#include "GL/glew.h"
+#include "glplatform.h"
 #include <string>
 #include <vector>
 #include <unordered_map>

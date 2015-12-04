@@ -30,13 +30,13 @@ namespace xGS
         virtual ~xGSIUnknownImpl()
         {}
 
-        unsigned int __stdcall AddRef() override
+        unsigned int INTERFACECALL AddRef() override
         {
             ++p_refcount;
             return p_refcount;
         }
 
-        unsigned int __stdcall Release() override
+        unsigned int INTERFACECALL Release() override
         {
             if ((--p_refcount) == 0) {
                 delete this;

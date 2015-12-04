@@ -15,7 +15,7 @@
 #pragma once
 
 #include "xGSobject.h"
-#include "GL/glew.h"
+#include "glplatform.h"
 #include <vector>
 #include <unordered_map>
 

@@ -140,6 +140,7 @@ GSbool xGSInputImpl::allocate(const GSinputdescription &desc)
 
 void xGSInputImpl::apply(const GScaps &caps)
 {
+#ifdef GS_CONFIG_SEPARATE_VERTEX_FORMAT
     if (p_vertexarray) {
         // VAO available, but no separate format
         // bind whole VAO
@@ -157,6 +158,11 @@ void xGSInputImpl::apply(const GScaps &caps)
 
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, p_indexbuffer);
     }
+#else
+    if (p_vertexarray) {
+        glBindVertexArray(p_vertexarray);
+    }
+#endif
 }
 
 void xGSInputImpl::ReleaseRendererResources()

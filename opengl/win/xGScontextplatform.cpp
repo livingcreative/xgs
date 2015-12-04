@@ -7,11 +7,11 @@
 
     https://github.com/livingcreative/xgs
 
-    xGScontextwgl.cpp
-        WGL context implementation
+    win/xGScontextplatform.cpp
+        xGScontextWGL class implementation
 */
 
-#include "xGScontextwgl.h"
+#include "xGScontextplatform.h"
 #include "xGSdefaultcontext.h"
 #include "GL/wglew.h"
 
@@ -520,3 +520,7 @@ void xGScontextWGL::CleanUp()
         p_defaultwidget = 0;
     }
 }
+
+// default context implementation
+// think about option for "unity build" and consider it here
+#include "xGSdefaultcontext.cpp"

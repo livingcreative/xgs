@@ -13,6 +13,7 @@
 
 #include "xGSgeometrybuffer.h"
 #include "xGSutil.h"
+#include "kcommon/c_util.h"
 
 
 using namespace xGS;
@@ -113,7 +114,12 @@ GSptr xGSGeometryBufferImpl::Lock(GSenum locktype, GSdword access, void *lockdat
     }
 
     p_owner->error(GS_OK);
-    return lock(locktype);
+    return lock(
+        locktype, 0,
+        locktype == GS_LOCK_VERTEXDATA ?
+          p_vertexdecl.buffer_size(p_vertexcount) :
+          index_buffer_size(p_indexformat, p_indexcount)
+     );
 }
 
 GSbool xGSGeometryBufferImpl::Unlock()
@@ -130,10 +136,10 @@ GSbool xGSGeometryBufferImpl::Unlock()
 
 GSbool xGSGeometryBufferImpl::allocateGeometry(GSuint vertexcount, GSuint indexcount, GSptr &vertexmemory, GSptr &indexmemory, GSuint &basevertex)
 {
-    vertexmemory = GSptr(p_vertexdecl.buffer_size(p_currentvertex));
+    vertexmemory = reinterpret_cast<GSptr>(p_vertexdecl.buffer_size(p_currentvertex));
     basevertex = p_currentvertex;
     p_currentvertex += vertexcount;
-    indexmemory = GSptr(index_buffer_size(p_indexformat, p_currentindex));
+    indexmemory = reinterpret_cast<GSptr>(index_buffer_size(p_indexformat, p_currentindex));
     p_currentindex += indexcount;
 
     return GS_TRUE;
@@ -143,18 +149,28 @@ void xGSGeometryBufferImpl::freeGeometry(GSuint vertexcount, GSuint indexcount, 
 {
 }
 
-GSptr xGSGeometryBufferImpl::lock(GSenum locktype)
+GSptr xGSGeometryBufferImpl::lock(GSenum locktype, size_t offset, size_t size)
 {
     p_locktype = locktype;
 
     switch (locktype) {
         case GS_LOCK_VERTEXDATA:
             glBindBuffer(GL_ARRAY_BUFFER, p_vertexbuffer);
-            return glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
+
+#ifdef GS_CONFIG_MAP_BUFFER_RANGE
+            return glMapBufferRange(GL_ARRAY_BUFFER, offset, size, GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT);
+#else
+            return getp(glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY), offset);
+#endif
 
         case GS_LOCK_INDEXDATA:
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, p_indexbuffer);
-            return glMapBuffer(GL_ELEMENT_ARRAY_BUFFER, GL_WRITE_ONLY);
+
+#ifdef GS_CONFIG_MAP_BUFFER_RANGE
+            return glMapBufferRange(GL_ELEMENT_ARRAY_BUFFER, offset, size, GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT);
+#else
+            return getp(glMapBuffer(GL_ELEMENT_ARRAY_BUFFER, GL_WRITE_ONLY), offset);
+#endif
     }
 
     return nullptr;

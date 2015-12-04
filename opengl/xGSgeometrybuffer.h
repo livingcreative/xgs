@@ -59,7 +59,7 @@ namespace xGS
         GSbool allocateGeometry(GSuint vertexcount, GSuint indexcount, GSptr &vertexmemory, GSptr &indexmemory, GSuint &basevertex);
         void freeGeometry(GSuint vertexcount, GSuint indexcount, GSptr vertexmemory, GSptr indexmemory);
 
-        GSptr lock(GSenum locktype);
+        GSptr lock(GSenum locktype, size_t offset, size_t size);
         void unlock();
 
         void BeginImmediateDrawing();
