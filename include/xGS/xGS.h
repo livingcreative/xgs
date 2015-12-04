@@ -1032,13 +1032,6 @@ struct GSimmediateprimitive
     Other common stuff for xGS objects (not included here, every object has its own set
     of parameters for each function):
 
-        Allocate
-            After creation with CreateObject system function object is in EMPTY state and has
-            no associated data. To finally create object and make it usable one must call
-            Allocate function. In general it takes description structure with object
-            parameters. Every type of object has its own description structure to pass to
-            Allocate function.
-
         Lock/Unlock
             Objects which have mutable data (e.g. texture image data, uniform data and so on)
             have these methods to get pointer for data access. In general Lock has different
@@ -1081,9 +1074,6 @@ public:
             GS_GEOMETRY_RESTART       - index data has special primitive restart index value
             GS_GEOMETRY_RESTARTINDEX  - special value for primitive restart
 
-        Allocate - initialize geometry object and allocate its data based on
-                   GSgeometrydescription structure
-
         Lock     - lock part of geometry buffer specific to this geometry object
                    following data can be locked for access from CPU side:
                         GS_LOCK_VERTEXDATA - lock vertex data
@@ -1122,9 +1112,6 @@ public:
             GS_GB_ACCESS            - buffer acces type
             GS_GB_VERTICESALLOCATED - amount of allocated vertices
             GS_GB_INDICESALLOCATED  - amount of allocated indices
-
-        Allocate - initialize geometry buffer object and allocate its data based on
-                   GSgeometrybufferdescription structure
 
         Lock     - lock entire geometry buffer
                    following data can be locked for access from CPU side:
@@ -1183,9 +1170,6 @@ public:
             GS_TEX_MAX_LEVEL   - texture maximum MIP level
             GS_TEX_MULTISAMPLE - texture multisampling
 
-        Allocate - initialize texture object and allocate its data based on
-                   GStexturedescription structure
-
         Lock     - lock texture image
                    following data can be locked for access from CPU side:
                         GS_LOCK_TEXTURE   - texture image layer of given MIP level for non cubemap texture
@@ -1228,8 +1212,6 @@ public:
             GS_FB_STENCILFORMAT - format for stencil attachment
             GS_FB_MULTISAMPLE   - multisampling
             GS_FB_COLORFORMATn  - format for n-th color target
-
-        Allocate - initialize frame buffer object based on GSframebufferdescription structure
 
         * these values are applicable only for default onscreen frame buffer and always
         return constant values for xGSFrameBuffer object
