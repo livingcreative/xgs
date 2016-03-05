@@ -25,7 +25,7 @@ namespace xGS
 
 
     // framebuffer object
-    class xGSFrameBufferImpl : public xGSObject<xGSFrameBuffer, xGSFrameBufferImpl>
+    class xGSFrameBufferImpl : public xGSObjectImpl<xGSFrameBuffer, xGSFrameBufferImpl>
     {
     public:
         xGSFrameBufferImpl(xGSImpl *owner);

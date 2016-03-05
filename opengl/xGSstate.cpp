@@ -22,7 +22,7 @@ using namespace std;
 
 
 xGSStateImpl::xGSStateImpl(xGSImpl *owner) :
-    xGSObject(owner),
+    xGSObjectImpl(owner),
     p_program(0),
     p_vao(0),
     p_allocated(false),

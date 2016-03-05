@@ -21,7 +21,7 @@ using namespace c_util;
 
 
 xGSFrameBufferImpl::xGSFrameBufferImpl(xGSImpl *owner) :
-    xGSObject(owner),
+    xGSObjectImpl(owner),
     p_width(0),
     p_height(0),
     p_colortargets(1),

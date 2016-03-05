@@ -22,7 +22,7 @@ namespace xGS
 {
 
     // geometry buffer object
-    class xGSGeometryBufferImpl : public xGSObject<xGSGeometryBuffer, xGSGeometryBufferImpl>
+    class xGSGeometryBufferImpl : public xGSObjectImpl<xGSGeometryBuffer, xGSGeometryBufferImpl>
     {
     public:
         xGSGeometryBufferImpl(xGSImpl *owner);

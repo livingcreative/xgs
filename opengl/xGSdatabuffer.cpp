@@ -19,7 +19,7 @@ using namespace xGS;
 
 
 xGSDataBufferImpl::xGSDataBufferImpl(xGSImpl *owner) :
-    xGSObject(owner),
+    xGSObjectImpl(owner),
     p_buffer(0),
     p_target(0),
     p_size(0),

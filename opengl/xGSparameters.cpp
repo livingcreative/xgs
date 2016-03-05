@@ -23,7 +23,7 @@ using namespace std;
 
 
 xGSParametersImpl::xGSParametersImpl(xGSImpl *owner) :
-    xGSObject(owner),
+    xGSObjectImpl(owner),
     p_allocated(false),
     p_state(nullptr),
     p_setindex(GS_UNDEFINED)

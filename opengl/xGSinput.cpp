@@ -21,7 +21,7 @@ using namespace xGS;
 
 
 xGSInputImpl::xGSInputImpl(xGSImpl *owner) :
-    xGSObject(owner),
+    xGSObjectImpl(owner),
     p_allocated(false),
     p_state(nullptr),
     p_primarybuffer(nullptr),

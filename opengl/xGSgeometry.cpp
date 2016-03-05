@@ -19,7 +19,7 @@ using namespace xGS;
 
 
 xGSGeometryImpl::xGSGeometryImpl(xGSImpl *owner) :
-    xGSObject(owner),
+    xGSObjectImpl(owner),
 
     p_allocated(false),
 

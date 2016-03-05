@@ -110,7 +110,7 @@ namespace xGS
             IxGSTexture dst, GSuint dstlevel, GSuint dstx, GSuint dsty, GSuint dstz,
             GSuint width, GSuint height, GSuint depth
         ) override;
-        GSbool xGSAPI CopyData(xGSObject *src, xGSObject *dst, GSuint64 readoffset, GSuint64 writeoffset, GSuint64 size, GSuint flags) override;
+        GSbool xGSAPI CopyData(xGSObject *src, xGSObject *dst, GSuint readoffset, GSuint writeoffset, GSuint size, GSuint flags) override;
 
         GSbool xGSAPI Compute(IxGSComputeState state, GSuint x, GSuint y, GSuint z) override;
 

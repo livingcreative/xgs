@@ -20,7 +20,7 @@ using namespace c_util;
 
 
 xGSTextureImpl::xGSTextureImpl(xGSImpl *owner) :
-    xGSObject(owner),
+    xGSObjectImpl(owner),
     p_texturetype(GS_TEXTYPE_EMPTY),
     p_width(0),
     p_height(0),

@@ -29,7 +29,7 @@ namespace xGS
 
 
     // input object
-    class xGSInputImpl : public xGSObject<xGSInput, xGSInputImpl>
+    class xGSInputImpl : public xGSObjectImpl<xGSInput, xGSInputImpl>
     {
     public:
         xGSInputImpl(xGSImpl *owner);

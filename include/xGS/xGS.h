@@ -1383,7 +1383,7 @@ public:
         IxGSTexture dst, GSuint dstlevel, GSuint dstx, GSuint dsty, GSuint dstz,
         GSuint width, GSuint height, GSuint depth
     ) = 0;
-    virtual GSbool xGSAPI CopyData(xGSObject *src, xGSObject *dst, GSuint64 readoffset, GSuint64 writeoffset, GSuint64 size, GSuint flags) = 0;
+    virtual GSbool xGSAPI CopyData(xGSObject *src, xGSObject *dst, GSuint readoffset, GSuint writeoffset, GSuint size, GSuint flags) = 0;
 
     // compute API wip
     virtual GSbool xGSAPI Compute(IxGSComputeState state, GSuint x, GSuint y, GSuint z) = 0;

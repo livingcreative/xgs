@@ -22,7 +22,7 @@ namespace xGS
 {
 
     // geometry object
-    class xGSGeometryImpl : public xGSObject<xGSGeometry, xGSGeometryImpl>
+    class xGSGeometryImpl : public xGSObjectImpl<xGSGeometry, xGSGeometryImpl>
     {
     public:
         xGSGeometryImpl(xGSImpl *owner);

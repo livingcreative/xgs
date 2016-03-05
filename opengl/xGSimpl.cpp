@@ -415,7 +415,7 @@ GSbool xGSImpl::DestroyRenderer(GSbool restorevideomode)
 
 #define GS_CREATE_OBJECT(typeconst, impltype, desctype)\
         case typeconst: {\
-            impltype *object = impltype::create(this);\
+            impltype *object = impltype::create(this, typeconst);\
             if (object->allocate(*reinterpret_cast<const desctype*>(desc))) {\
                 *result = object;\
                 return error(GS_OK);\
@@ -1089,7 +1089,7 @@ static bool BindCopyObject(xGSObject *obj, GLenum copytarget)
     return true;
 }
 
-GSbool xGSImpl::CopyData(xGSObject *src, xGSObject *dst, GSuint64 readoffset, GSuint64 writeoffset, GSuint64 size, GSuint flags)
+GSbool xGSImpl::CopyData(xGSObject *src, xGSObject *dst, GSuint readoffset, GSuint writeoffset, GSuint size, GSuint flags)
 {
     // TODO: checks
 
