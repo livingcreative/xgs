@@ -7,8 +7,8 @@
 
     https://github.com/livingcreative/xgs
 
-    xGSuniformbuffer.h
-        UniformBuffer object implementation class header
+    xGSdatabuffer.h
+        DataBuffer object implementation class header
             this object wraps buffer for holding uniform data which is used
             by shaders in state object
 */
@@ -23,11 +23,11 @@ namespace xGS
 {
 
     // uniform buffer object
-    class xGSUniformBufferImpl : public xGSObject<xGSUniformBuffer, xGSUniformBufferImpl>
+    class xGSDataBufferImpl : public xGSObject<xGSDataBuffer, xGSDataBufferImpl>
     {
     public:
-        xGSUniformBufferImpl(xGSImpl *owner);
-        ~xGSUniformBufferImpl() override;
+        xGSDataBufferImpl(xGSImpl *owner);
+        ~xGSDataBufferImpl() override;
 
     public:
         GSvalue xGSAPI GetValue(GSenum valuetype) override;
@@ -51,7 +51,7 @@ namespace xGS
         };
 
     public:
-        GSbool allocate(const GSuniformbufferdescription &desc);
+        GSbool allocate(const GSdatabufferdescription &desc);
 
         bool allocated() const { return p_buffer != 0; }
         GLuint getID() const { return p_buffer; }
@@ -77,6 +77,7 @@ namespace xGS
 
     private:
         GLuint           p_buffer;
+        GLenum           p_target;
         GSuint           p_size;
 
         UniformBlockList p_blocks;

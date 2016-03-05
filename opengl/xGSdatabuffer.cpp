@@ -7,40 +7,47 @@
 
     https://github.com/livingcreative/xgs
 
-    xGSuniformbuffer.cpp
-        UniformBuffer object implementation class
+    xGSdatabuffer.cpp
+        DataBuffer object implementation class
 */
 
-#include "xGSuniformbuffer.h"
+#include "xGSdatabuffer.h"
 #include "xGSstate.h"
 
 
 using namespace xGS;
 
 
-xGSUniformBufferImpl::xGSUniformBufferImpl(xGSImpl *owner) :
+xGSDataBufferImpl::xGSDataBufferImpl(xGSImpl *owner) :
     xGSObject(owner),
     p_buffer(0),
+    p_target(0),
     p_size(0),
     p_locktype(GS_NONE)
 {
-    p_owner->debug(DebugMessageLevel::Information, "UniformBuffer object created\n");
+    p_owner->debug(DebugMessageLevel::Information, "DataBuffer object created\n");
 }
 
-xGSUniformBufferImpl::~xGSUniformBufferImpl()
+xGSDataBufferImpl::~xGSDataBufferImpl()
 {
     ReleaseRendererResources();
-    p_owner->debug(DebugMessageLevel::Information, "UniformBuffer object destroyed\n");
+    p_owner->debug(DebugMessageLevel::Information, "DataBuffer object destroyed\n");
 }
 
-GSvalue xGSUniformBufferImpl::GetValue(GSenum valuetype)
+GSvalue xGSDataBufferImpl::GetValue(GSenum valuetype)
 {
     p_owner->error(GSE_UNIMPLEMENTED);
     return 0;
 }
 
-GSbool xGSUniformBufferImpl::allocate(const GSuniformbufferdescription &desc)
+GSbool xGSDataBufferImpl::allocate(const GSdatabufferdescription &desc)
 {
+    switch (desc.type) {
+        case GSDT_UNIFORM: p_target = GL_UNIFORM_BUFFER; break;
+        default:
+            return p_owner->error(GSE_INVALIDENUM);
+    }
+
     p_size = 0;
 
     if (!desc.blocks) {
@@ -113,25 +120,25 @@ GSbool xGSUniformBufferImpl::allocate(const GSuniformbufferdescription &desc)
     }
 
     glGenBuffers(1, &p_buffer);
-    glBindBuffer(GL_UNIFORM_BUFFER, p_buffer);
-    glBufferData(GL_UNIFORM_BUFFER, p_size, nullptr, GL_STREAM_DRAW);
+    glBindBuffer(p_target, p_buffer);
+    glBufferData(p_target, p_size, nullptr, GL_STREAM_DRAW);
 
     return p_owner->error(GS_OK);
 }
 
-GSbool xGSUniformBufferImpl::Update(GSuint offset, GSuint size, const GSptr data)
+GSbool xGSDataBufferImpl::Update(GSuint offset, GSuint size, const GSptr data)
 {
     if (p_size == 0) {
         return p_owner->error(GSE_INVALIDOPERATION);
     }
 
-    glBindBuffer(GL_UNIFORM_BUFFER, p_buffer);
-    glBufferSubData(GL_UNIFORM_BUFFER, GLintptr(offset), size, data);
+    glBindBuffer(p_target, p_buffer);
+    glBufferSubData(p_target, GLintptr(offset), size, data);
 
     return p_owner->error(GS_OK);
 }
 
-GSbool xGSUniformBufferImpl::UpdateBlock(GSuint block, GSuint index, const GSptr data)
+GSbool xGSDataBufferImpl::UpdateBlock(GSuint block, GSuint index, const GSptr data)
 {
     if (p_size == 0) {
         return p_owner->error(GSE_INVALIDOPERATION);
@@ -147,13 +154,13 @@ GSbool xGSUniformBufferImpl::UpdateBlock(GSuint block, GSuint index, const GSptr
         return p_owner->error(GSE_INVALIDVALUE);
     }
 
-    glBindBuffer(GL_UNIFORM_BUFFER, p_buffer);
-    glBufferSubData(GL_UNIFORM_BUFFER, GLintptr(ub.offset + ub.size * index), ub.actualsize, data);
+    glBindBuffer(p_target, p_buffer);
+    glBufferSubData(p_target, GLintptr(ub.offset + ub.size * index), ub.actualsize, data);
 
     return p_owner->error(GS_OK);
 }
 
-GSbool xGSUniformBufferImpl::UpdateValue(GSuint block, GSuint index, GSuint uniform, GSuint uniformindex, GSuint count, const GSptr data)
+GSbool xGSDataBufferImpl::UpdateValue(GSuint block, GSuint index, GSuint uniform, GSuint uniformindex, GSuint count, const GSptr data)
 {
     if (p_size == 0) {
         return p_owner->error(GSE_INVALIDOPERATION);
@@ -181,13 +188,13 @@ GSbool xGSUniformBufferImpl::UpdateValue(GSuint block, GSuint index, GSuint unif
 
     size_t offset = ub.offset + ub.size * index + u.offset + u.stride * uniformindex;
 
-    glBindBuffer(GL_UNIFORM_BUFFER, p_buffer);
-    glBufferSubData(GL_UNIFORM_BUFFER, GLintptr(offset), u.stride * count, data);
+    glBindBuffer(p_target, p_buffer);
+    glBufferSubData(p_target, GLintptr(offset), u.stride * count, data);
 
     return p_owner->error(GS_OK);
 }
 
-GSptr xGSUniformBufferImpl::Lock(GSdword access, void *lockdata)
+GSptr xGSDataBufferImpl::Lock(GSdword access, void *lockdata)
 {
     if (p_locktype) {
         p_owner->error(GSE_INVALIDOPERATION);
@@ -197,11 +204,11 @@ GSptr xGSUniformBufferImpl::Lock(GSdword access, void *lockdata)
     p_locktype = GS_LOCKED;
     p_owner->error(GS_OK);
 
-    glBindBuffer(GL_UNIFORM_BUFFER, p_buffer);
-    return glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
+    glBindBuffer(p_target, p_buffer);
+    return glMapBuffer(p_target, GL_WRITE_ONLY);
 }
 
-GSbool xGSUniformBufferImpl::Unlock()
+GSbool xGSDataBufferImpl::Unlock()
 {
     if (p_locktype == GS_NONE) {
         return p_owner->error(GSE_INVALIDOPERATION);
@@ -209,16 +216,17 @@ GSbool xGSUniformBufferImpl::Unlock()
 
     p_locktype = GS_NONE;
 
-    glBindBuffer(GL_UNIFORM_BUFFER, p_buffer);
-    glUnmapBuffer(GL_UNIFORM_BUFFER);
+    glBindBuffer(p_target, p_buffer);
+    glUnmapBuffer(p_target);
 
     return p_owner->error(GS_OK);
 }
 
-void xGSUniformBufferImpl::ReleaseRendererResources()
+void xGSDataBufferImpl::ReleaseRendererResources()
 {
     if (p_buffer) {
         glDeleteBuffers(1, &p_buffer);
     }
+    p_target = 0;
     p_size = 0;
 }
