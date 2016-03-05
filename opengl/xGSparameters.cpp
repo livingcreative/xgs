@@ -14,7 +14,7 @@
 #include "xGSparameters.h"
 #include "xGSstate.h"
 #include "xGSgeometrybuffer.h"
-#include "xGSuniformbuffer.h"
+#include "xGSdatabuffer.h"
 #include "xGStexture.h"
 
 

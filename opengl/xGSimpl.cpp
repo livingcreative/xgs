@@ -15,7 +15,7 @@
 #include "xGScontext.h"
 #include "xGSgeometry.h"
 #include "xGSgeometrybuffer.h"
-#include "xGSuniformbuffer.h"
+#include "xGSdatabuffer.h"
 #include "xGStexture.h"
 #include "xGSframebuffer.h"
 #include "xGSstate.h"
@@ -61,7 +61,7 @@ xGSImpl::xGSImpl(xGScontext *context) :
 
     p_geometrylist(),
     p_geometrybufferlist(),
-    p_uniformbufferlist(),
+    p_databufferlist(),
     p_texturelist(),
     p_samplerlist(),
     p_framebufferlist(),
@@ -359,6 +359,11 @@ GSbool xGSImpl::CreateRenderer(const GSrendererdescription &desc)
     // TEMP
     glPointSize(10.0f);
 
+
+    memset(p_timerqueries, 0, sizeof(p_timerqueries));
+    p_timerindex = 0;
+    p_timerscount = 0;
+
 #ifdef _DEBUG
     debugTrackGLError("xGSImpl::CreateRenderer");
 #endif
@@ -389,7 +394,7 @@ GSbool xGSImpl::DestroyRenderer(GSbool restorevideomode)
     ReleaseObjectList(p_geometrylist, "Geomtery");
     ReleaseObjectList(p_framebufferlist, "Framebuffer");
     ReleaseObjectList(p_geometrybufferlist, "GeomteryBuffer");
-    ReleaseObjectList(p_uniformbufferlist, "UniformBuffer");
+    ReleaseObjectList(p_databufferlist, "DataBuffer");
     ReleaseObjectList(p_texturelist, "Texture");
 
     for (auto &sampler : p_samplerlist) {
@@ -397,6 +402,8 @@ GSbool xGSImpl::DestroyRenderer(GSbool restorevideomode)
     }
 
     glDeleteQueries(1, &p_capturequery);
+
+    glDeleteQueries(p_timerscount, p_timerqueries);
 
     p_context->DestroyRenderer();
 
@@ -422,9 +429,9 @@ GSbool xGSImpl::CreateObject(GSenum type, const void *desc, void **result)
 {
     // TODO: make refcounting and adding to object list only after successful creation
     switch (type) {
-        GS_CREATE_OBJECT(GS_OBJECTTYPE_GEOMTERY, xGSGeometryImpl, GSgeometrydescription)
-        GS_CREATE_OBJECT(GS_OBJECTTYPE_GEOMTERYBUFFER, xGSGeometryBufferImpl, GSgeometrybufferdescription)
-        GS_CREATE_OBJECT(GS_OBJECTTYPE_UNIFORMBUFFER, xGSUniformBufferImpl, GSuniformbufferdescription)
+        GS_CREATE_OBJECT(GS_OBJECTTYPE_GEOMETRY, xGSGeometryImpl, GSgeometrydescription)
+        GS_CREATE_OBJECT(GS_OBJECTTYPE_GEOMETRYBUFFER, xGSGeometryBufferImpl, GSgeometrybufferdescription)
+        GS_CREATE_OBJECT(GS_OBJECTTYPE_DATABUFFER, xGSDataBufferImpl, GSdatabufferdescription)
         GS_CREATE_OBJECT(GS_OBJECTTYPE_TEXTURE, xGSTextureImpl, GStexturedescription)
         GS_CREATE_OBJECT(GS_OBJECTTYPE_FRAMEBUFFER, xGSFrameBufferImpl, GSframebufferdescription)
         GS_CREATE_OBJECT(GS_OBJECTTYPE_STATE, xGSStateImpl, GSstatedescription)
@@ -544,6 +551,9 @@ GSbool xGSImpl::Display()
     if (!ValidateState(RENDERER_READY, true, true, false)) {
         return GS_FALSE;
     }
+
+    // TODO: think about resetting timers here
+    p_timerindex = 0;
 
     return p_context->Display();
 }
@@ -1023,6 +1033,158 @@ GSbool xGSImpl::BuildMIPs(IxGSTexture texture)
     return error(GS_OK);
 }
 
+GSbool xGSImpl::CopyImage(
+    IxGSTexture src, GSuint srclevel, GSuint srcx, GSuint srcy, GSuint srcz,
+    IxGSTexture dst, GSuint dstlevel, GSuint dstx, GSuint dsty, GSuint dstz,
+    GSuint width, GSuint height, GSuint depth
+)
+{
+    // TODO: checks
+
+    xGSTextureImpl *srctex = static_cast<xGSTextureImpl*>(src);
+    xGSTextureImpl *dsttex = static_cast<xGSTextureImpl*>(dst);
+
+    glCopyImageSubData(
+        srctex->getID(), srctex->target(), GLint(srclevel), GLint(srcx), GLint(srcy), GLint(srcz),
+        dsttex->getID(), dsttex->target(), GLint(dstlevel), GLint(dstx), GLint(dsty), GLint(dstz),
+        width, height, depth
+    );
+
+    return error(GS_OK);
+}
+
+static bool BindCopyObject(xGSObject *obj, GLenum copytarget)
+{
+    GSenum type = static_cast<xGSUnknownObjectImpl*>(obj)->objecttype();
+
+    GLuint objectid = 0;
+    switch (type) {
+        case GS_OBJECTTYPE_GEOMETRYBUFFER: {
+            xGSGeometryBufferImpl *impl = static_cast<xGSGeometryBufferImpl*>(obj);
+            objectid = impl->getVertexBufferID();
+            break;
+        }
+
+        case GS_OBJECTTYPE_DATABUFFER: {
+            xGSDataBufferImpl *impl = static_cast<xGSDataBufferImpl*>(obj);
+            objectid = impl->getID();
+            break;
+        }
+
+        case GS_OBJECTTYPE_TEXTURE: {
+            xGSTextureImpl *impl = static_cast<xGSTextureImpl*>(obj);
+            if (impl->target() != GL_TEXTURE_BUFFER) {
+                return false;
+            }
+            objectid = impl->getID();
+            break;
+        }
+
+        default:
+            return false;
+    }
+
+    glBindBuffer(copytarget, objectid);
+
+    return true;
+}
+
+GSbool xGSImpl::CopyData(xGSObject *src, xGSObject *dst, GSuint64 readoffset, GSuint64 writeoffset, GSuint64 size, GSuint flags)
+{
+    // TODO: checks
+
+    GSenum dsttype = static_cast<xGSUnknownObjectImpl*>(dst)->objecttype();
+
+    if (!BindCopyObject(src, GL_COPY_READ_BUFFER)) {
+        return error(GSE_INVALIDOPERATION);
+    }
+
+    if (!BindCopyObject(dst, GL_COPY_WRITE_BUFFER)) {
+        return error(GSE_INVALIDOPERATION);
+    }
+
+    glCopyBufferSubData(
+        GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER,
+        readoffset, writeoffset, size
+    );
+
+    return error(GS_OK);
+}
+
+GSbool xGSImpl::Compute(IxGSComputeState state, GSuint x, GSuint y, GSuint z)
+{
+    // TODO:
+
+    return GS_FALSE;
+}
+
+GSbool xGSImpl::BeginTimerQuery()
+{
+    // TODO: checks
+
+    if (p_timerqueries[p_timerindex] == 0) {
+        glGenQueries(1, &p_timerqueries[p_timerindex]);
+    }
+
+    glBeginQuery(GL_TIME_ELAPSED, p_timerqueries[p_timerindex]);
+
+    ++p_timerindex;
+    if (p_timerindex > p_timerscount) {
+        p_timerscount = p_timerindex;
+    }
+
+    return GS_TRUE;
+}
+
+GSbool xGSImpl::EndTimerQuery()
+{
+    // TODO: checks
+
+    glEndQuery(GL_TIME_ELAPSED);
+
+    return GS_TRUE;
+}
+
+GSbool xGSAPI xGSImpl::TimstampQuery()
+{
+    // TODO: checks
+    // TODO: remove copypasta
+
+    if (p_timerqueries[p_timerindex] == 0) {
+        glGenQueries(1, &p_timerqueries[p_timerindex]);
+    }
+
+    glQueryCounter(p_timerqueries[p_timerindex], GL_TIMESTAMP);
+
+    ++p_timerindex;
+    if (p_timerindex > p_timerscount) {
+        p_timerscount = p_timerindex;
+    }
+
+    return GS_TRUE;
+}
+
+GSbool xGSImpl::GatherTimers(GSuint64 *values, GSuint count)
+{
+    // TODO: checks
+
+    if (count >= p_timerindex) {
+        GLint available = 0;
+        while (!available) {
+            glGetQueryObjectiv(p_timerqueries[p_timerindex - 1], GL_QUERY_RESULT_AVAILABLE, &available);
+        }
+
+        for (GSuint n = 0; n < p_timerindex; ++n) {
+            glGetQueryObjecti64v(p_timerqueries[n], GL_QUERY_RESULT, reinterpret_cast<GLint64*>(values));
+            ++values;
+        }
+    }
+
+    p_timerindex = 0;
+
+    return GS_TRUE;
+}
+
 
 #define GS_ADD_REMOVE_OBJECT_IMPL(list, type)\
 template <> void xGSImpl::AddObject(type *object)\
@@ -1037,7 +1199,7 @@ template <> void xGSImpl::RemoveObject(type *object)\
 
 GS_ADD_REMOVE_OBJECT_IMPL(p_geometrylist, xGSGeometryImpl)
 GS_ADD_REMOVE_OBJECT_IMPL(p_geometrybufferlist, xGSGeometryBufferImpl)
-GS_ADD_REMOVE_OBJECT_IMPL(p_uniformbufferlist, xGSUniformBufferImpl)
+GS_ADD_REMOVE_OBJECT_IMPL(p_databufferlist, xGSDataBufferImpl)
 GS_ADD_REMOVE_OBJECT_IMPL(p_texturelist, xGSTextureImpl)
 GS_ADD_REMOVE_OBJECT_IMPL(p_framebufferlist, xGSFrameBufferImpl)
 GS_ADD_REMOVE_OBJECT_IMPL(p_statelist, xGSStateImpl)

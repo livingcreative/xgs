@@ -24,7 +24,7 @@ namespace xGS
     // forwards
     class xGSImpl;
     class xGSStateImpl;
-    class xGSUniformBufferImpl;
+    class xGSDataBufferImpl;
     class xGSTextureImpl;
 
 
@@ -351,10 +351,10 @@ namespace xGS
     protected:
         struct UniformBlockData
         {
-            GLuint                index;
-            GSuint                offset;
-            GSuint                size;
-            xGSUniformBufferImpl *buffer;
+            GLuint             index;
+            GSuint             offset;
+            GSuint             size;
+            xGSDataBufferImpl *buffer;
         };
 
         struct TextureSlot

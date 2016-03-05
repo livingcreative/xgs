@@ -548,7 +548,7 @@ class xGSSystem;
 
 class xGSGeometry;
 class xGSGeometryBuffer;
-class xGSUniformBuffer;
+class xGSDataBuffer;
 class xGSTexture;
 class xGSFrameBuffer;
 

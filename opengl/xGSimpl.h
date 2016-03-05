@@ -31,7 +31,7 @@ namespace xGS
     class xGScontextCreator;
     class xGSGeometryImpl;
     class xGSGeometryBufferImpl;
-    class xGSUniformBufferImpl;
+    class xGSDataBufferImpl;
     class xGSTextureImpl;
     class xGSFrameBufferImpl;
     class xGSStateImpl;
@@ -104,6 +104,20 @@ namespace xGS
         GSbool xGSAPI EndImmediateDrawing() override;
 
         GSbool xGSAPI BuildMIPs(IxGSTexture texture) override;
+
+        GSbool xGSAPI CopyImage(
+            IxGSTexture src, GSuint srclevel, GSuint srcx, GSuint srcy, GSuint srcz,
+            IxGSTexture dst, GSuint dstlevel, GSuint dstx, GSuint dsty, GSuint dstz,
+            GSuint width, GSuint height, GSuint depth
+        ) override;
+        GSbool xGSAPI CopyData(xGSObject *src, xGSObject *dst, GSuint64 readoffset, GSuint64 writeoffset, GSuint64 size, GSuint flags) override;
+
+        GSbool xGSAPI Compute(IxGSComputeState state, GSuint x, GSuint y, GSuint z) override;
+
+        GSbool xGSAPI BeginTimerQuery() override;
+        GSbool xGSAPI EndTimerQuery() override;
+        GSbool xGSAPI TimstampQuery() override;
+        GSbool xGSAPI GatherTimers(GSuint64 *values, GSuint count) override;
 
     public:
         template <typename T> void AddObject(T *object);
@@ -210,7 +224,7 @@ namespace xGS
         typedef std::vector<Sampler>                                 SamplerList;
         typedef std::unordered_set<xGSGeometryImpl*>                 GeometryList;
         typedef std::unordered_set<xGSGeometryBufferImpl*>           GeometryBufferList;
-        typedef std::unordered_set<xGSUniformBufferImpl*>            UniformBufferList;
+        typedef std::unordered_set<xGSDataBufferImpl*>               DataBufferList;
         typedef std::unordered_set<xGSTextureImpl*>                  TextureList;
         typedef std::unordered_set<xGSFrameBufferImpl*>              FrameBufferList;
         typedef std::unordered_set<xGSStateImpl*>                    StateList;
@@ -229,7 +243,7 @@ namespace xGS
         SamplerList            p_samplerlist;
         GeometryList           p_geometrylist;
         GeometryBufferList     p_geometrybufferlist;
-        UniformBufferList      p_uniformbufferlist;
+        DataBufferList         p_databufferlist;
         TextureList            p_texturelist;
         FrameBufferList        p_framebufferlist;
         StateList              p_statelist;
@@ -251,6 +265,11 @@ namespace xGS
         GLuint                 p_capturequery;
 
         xGSGeometryBufferImpl *p_immediatebuffer;
+
+        // WIP
+        GLuint                 p_timerqueries[1024];
+        GSuint                 p_timerindex;
+        GSuint                 p_timerscount;
 
 #ifdef _DEBUG
         GSint                  dbg_memory_allocs;

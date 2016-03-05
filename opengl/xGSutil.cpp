@@ -15,7 +15,7 @@
 #include "xGSimpl.h"
 #include "xGSstate.h"
 #include "xGStexture.h"
-#include "xGSuniformbuffer.h"
+#include "xGSdatabuffer.h"
 
 
 using namespace xGS;
@@ -144,7 +144,7 @@ GSerror GSParametersState::allocate(xGSImpl *impl, xGSStateImpl *state, const GS
             }
 
             if (slot.location != GS_DEFAULT) {
-                xGSUniformBufferImpl *buffer = static_cast<xGSUniformBufferImpl*>(binding->buffer);
+                xGSDataBufferImpl *buffer = static_cast<xGSDataBufferImpl*>(binding->buffer);
                 if (!buffer->allocated()) {
                     return GSE_INVALIDOBJECT;
                 }
@@ -153,7 +153,7 @@ GSerror GSParametersState::allocate(xGSImpl *impl, xGSStateImpl *state, const GS
                     return GSE_INVALIDVALUE;
                 }
 
-                const xGSUniformBufferImpl::UniformBlock &block = buffer->block(binding->block);
+                const xGSDataBufferImpl::UniformBlock &block = buffer->block(binding->block);
 
                 UniformBlockData ub = {
                     GLuint(slot.location),
