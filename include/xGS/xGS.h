@@ -553,6 +553,7 @@ class xGSTexture;
 class xGSFrameBuffer;
 
 class xGSState;
+class xGSComputeState;
 class xGSInput;
 class xGSParameters;
 
