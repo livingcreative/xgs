@@ -41,6 +41,7 @@ typedef void*        GSptr;
 typedef void*        GShandle;
 typedef void*        GSwidget;
 
+typedef unsigned long long GSuint64;
 
 struct GSsize
 {
@@ -134,15 +135,16 @@ const GSvalue GS_MAX_PARAMETER_SLOTS = 8; // maximum state parameter slots per s
 // xGS object types (for CreateObject)
 // -----------------------------------------------------------------------------
 
-const GSenum GS_OBJECTTYPE_GEOMTERY       = 1;
-const GSenum GS_OBJECTTYPE_GEOMTERYBUFFER = 2;
-const GSenum GS_OBJECTTYPE_UNIFORMBUFFER  = 3;
+const GSenum GS_OBJECTTYPE_GEOMETRY       = 1;
+const GSenum GS_OBJECTTYPE_GEOMETRYBUFFER = 2;
+const GSenum GS_OBJECTTYPE_DATABUFFER     = 3;
 const GSenum GS_OBJECTTYPE_TEXTURE        = 4;
 const GSenum GS_OBJECTTYPE_FRAMEBUFFER    = 5;
 const GSenum GS_OBJECTTYPE_STATE          = 6;
 const GSenum GS_OBJECTTYPE_INPUT          = 7;
 const GSenum GS_OBJECTTYPE_PARAMETERS     = 8;
 const GSenum GS_OBJECTTYPE_RENDERLIST     = 9;
+const GSenum GS_OBJECTTYPE_COMPUTESTATE   = 10;
 
 
 // -----------------------------------------------------------------------------
@@ -327,7 +329,7 @@ const GSenum GS_LOCK_INDEXDATA       = 2;
 
 
 // -----------------------------------------------------------------------------
-// xGS UniformBuffer object specific enums and values
+// xGS DataBuffer object specific enums and values
 // -----------------------------------------------------------------------------
 
 // TODO: add UB object values
@@ -345,6 +347,9 @@ const GSenum GSU_VEC4   = 4;
 const GSenum GSU_MAT2   = 5;
 const GSenum GSU_MAT3   = 6;
 const GSenum GSU_MAT4   = 7;
+
+// data buffer type
+const GSenum GSDT_UNIFORM = 1;
 
 
 // -----------------------------------------------------------------------------
@@ -558,22 +563,24 @@ typedef xGSSystem         *IxGS;
 // resources
 typedef xGSGeometry       *IxGSGeometry;
 typedef xGSGeometryBuffer *IxGSGeometryBuffer;
-typedef xGSUniformBuffer  *IxGSUniformBuffer;
+typedef xGSDataBuffer     *IxGSDataBuffer;
 typedef xGSTexture        *IxGSTexture;
 typedef xGSFrameBuffer    *IxGSFrameBuffer;
 
 // states
 typedef xGSState          *IxGSState;
+typedef xGSComputeState   *IxGSComputeState;
 typedef xGSInput          *IxGSInput;
 typedef xGSParameters     *IxGSParameters;
 
 typedef InterfacePtr<IxGS>               IxGSRef;
 typedef InterfacePtr<IxGSGeometry>       IxGSGeometryRef;
 typedef InterfacePtr<IxGSGeometryBuffer> IxGSGeometryBufferRef;
-typedef InterfacePtr<IxGSUniformBuffer>  IxGSUniformBufferRef;
+typedef InterfacePtr<IxGSDataBuffer>     IxGSDataBufferRef;
 typedef InterfacePtr<IxGSTexture>        IxGSTextureRef;
 typedef InterfacePtr<IxGSFrameBuffer>    IxGSFrameBufferRef;
 typedef InterfacePtr<IxGSState>          IxGSStateRef;
+typedef InterfacePtr<IxGSComputeState>   IxGSComputeStateRef;
 typedef InterfacePtr<IxGSInput>          IxGSInputRef;
 typedef InterfacePtr<IxGSParameters>     IxGSParametersRef;
 
@@ -583,7 +590,6 @@ typedef InterfacePtr<IxGSParameters>     IxGSParametersRef;
 //      GS_DEFAULT value for format and multisample will choose best available values for
 //      default render target. If some of buffer's surfaces not needed - format value should
 //      be set to GS_NONE
-//
 struct GSrendererdescription
 {
     GSwidget widget;        // windowing system handle
@@ -621,10 +627,10 @@ struct GSvertexcomponent
 
 struct GSuniformbinding
 {
-    GSenum            slot;
-    IxGSUniformBuffer buffer;
-    GSuint            block;
-    GSuint            index;
+    GSenum         slot;
+    IxGSDataBuffer buffer;
+    GSuint         block;
+    GSuint         index;
 };
 
 struct GStexturebinding
@@ -697,9 +703,10 @@ struct GSuniformblock
     GSuint           count;
 };
 
-struct GSuniformbufferdescription
+struct GSdatabufferdescription
 {
     const GSuniformblock *blocks;
+    GSenum                type;
     GSuint                flags;
 };
 
@@ -985,6 +992,40 @@ struct GSstatedescription
 };
 
 
+struct GSimagebinding
+{
+    GSenum       slot;
+    IxGSTexture  texture;
+    GSuint       level;
+    GSuint       layer;
+    GSuint       access;
+    GSenum       format;
+};
+
+
+struct GScomputeparameterlayout
+{
+    GSenum                  settype;
+    const GSparameterdecl  *parameters;
+
+    const GSuniformbinding *uniforms;
+    const GSimagebinding   *images;
+};
+
+
+struct GScomputestatedescription
+{
+    const char                     **shader;
+    const GScomputeparameterlayout  *parameterlayout;
+
+    static GScomputestatedescription construct()
+    {
+        GScomputestatedescription result = {};
+        return result;
+    }
+};
+
+
 struct GSinputbinding
 {
     GSenum             slot;
@@ -1130,16 +1171,16 @@ public:
 
 /*
  -------------------------------------------------------------------------------
- xGSUniformBuffer
+ xGSDataBuffer
  -------------------------------------------------------------------------------
-    UniformBuffer xGS object interface
+    DataBuffer xGS object interface
 
     This object holds uniform data for shader programs.
 
     Following specific values defined for this object type (can be queried with GetValue):
         TODO
 */
-class xGSUniformBuffer : public xGSObject
+class xGSDataBuffer : public xGSObject
 {
 public:
     virtual GSbool xGSAPI Update(GSuint offset, GSuint size, const GSptr data) = 0;
@@ -1255,6 +1296,18 @@ class xGSState : public IUnknownStub
 
 /*
  -------------------------------------------------------------------------------
+ xGSComputeState
+ -------------------------------------------------------------------------------
+    ComputeState xGS object interface
+
+    This object holds compute pipeline state.
+*/
+class xGSComputeState : public IUnknownStub
+{};
+
+
+/*
+ -------------------------------------------------------------------------------
  xGSInput
  -------------------------------------------------------------------------------
     Input xGS object interface
@@ -1323,6 +1376,22 @@ public:
     virtual GSbool xGSAPI EndImmediateDrawing() = 0;
 
     virtual GSbool xGSAPI BuildMIPs(IxGSTexture texture) = 0;
+
+    virtual GSbool xGSAPI CopyImage(
+        IxGSTexture src, GSuint srclevel, GSuint srcx, GSuint srcy, GSuint srcz,
+        IxGSTexture dst, GSuint dstlevel, GSuint dstx, GSuint dsty, GSuint dstz,
+        GSuint width, GSuint height, GSuint depth
+    ) = 0;
+    virtual GSbool xGSAPI CopyData(xGSObject *src, xGSObject *dst, GSuint64 readoffset, GSuint64 writeoffset, GSuint64 size, GSuint flags) = 0;
+
+    // compute API wip
+    virtual GSbool xGSAPI Compute(IxGSComputeState state, GSuint x, GSuint y, GSuint z) = 0;
+
+    // timer query API wip, for testing only now
+    virtual GSbool xGSAPI BeginTimerQuery() = 0;
+    virtual GSbool xGSAPI EndTimerQuery() = 0;
+    virtual GSbool xGSAPI TimstampQuery() = 0;
+    virtual GSbool xGSAPI GatherTimers(GSuint64 *values, GSuint count) = 0;
 };
 
 
