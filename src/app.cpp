@@ -34,6 +34,7 @@ static GLushort box_indices[] = {
 
 static xGSgeometrybuffer *buffer = nullptr;
 static xGSgeometry *boxgeom = nullptr;
+static xGStexture *tex = nullptr;
 static xGSstate *state = nullptr;
 
 
@@ -81,6 +82,27 @@ void initialize(void *hwnd)
         4, 6
     };
     gs->CreateObject(GS_OBJECT_GEOMETRY, &gdesc, reinterpret_cast<void**>(&boxgeom));
+
+
+    // create texture
+
+    // TODO: load texture from file
+
+    GStexturedesc tdesc = GStexturedesc::construct();
+    tdesc.width = 256;
+    tdesc.height = 256;
+    gs->CreateObject(GS_OBJECT_TEXTURE, &tdesc, reinterpret_cast<void**>(&tex));
+    // test checker fill
+    if (void *ptr = tex->Lock(GS_LOCK_TEXTURE, 0, 0, GS_WRITE)) {
+        unsigned int *pixel = reinterpret_cast<unsigned int*>(ptr);
+        for (unsigned int y = 0; y < tdesc.height; ++y) {
+            for (unsigned int x = 0; x< tdesc.width; ++x) {
+                *pixel++ = ((x / 16 + y / 16) & 1) ? 0xFFFFFFFF : 0xFF000000;
+            }
+        }
+
+        tex->Unlock();
+    }
 
 
     GSinputslot input[] = {

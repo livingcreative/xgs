@@ -1,7 +1,9 @@
 #include "xGSimpl.h"
 #include "xGSgeometrybuffer.h"
 #include "xGSgeometry.h"
+#include "xGStexture.h"
 #include "xGSstate.h"
+#include "xGSutil.h"
 
 
 xGSimpl::xGSimpl() :
@@ -13,6 +15,19 @@ xGSimpl::xGSimpl() :
 xGSimpl::~xGSimpl()
 {
     DestroyRenderer();
+}
+
+void APIENTRY OpenGLDebugCallback(
+    GLenum source, GLenum type, GLuint id, GLenum severity,
+    GLsizei length, const char *message, const void *userParam
+)
+{
+    char buf[4096];
+    sprintf_s(
+        buf, "OpenGL debug callback: %d %d %d %d %s\n",
+        source, type, id, severity, message
+    );
+    OutputDebugStringA(buf);
 }
 
 bool xGSimpl::CreateRenderer(const GSrendererdesc &desc)
@@ -65,6 +80,15 @@ bool xGSimpl::CreateRenderer(const GSrendererdesc &desc)
     // init GLEW lib so all extensions and modern GL can be used
     glewInit();
 
+#ifdef _DEBUG
+    if (GLEW_ARB_debug_output) {
+        glDebugMessageCallback(OpenGLDebugCallback, nullptr);
+        glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+    }
+#endif
+
+    TrackGLError();
+
     // make a basic setup for OpenGL
 
     return true;
@@ -92,42 +116,25 @@ bool xGSimpl::DestroyRenderer()
     return true;
 }
 
+#define GS_CREATE_OBJECT(type, impl, desctype) \
+    case type: { \
+        impl *objectimpl = new impl(); \
+        if (!objectimpl->Allocate(*reinterpret_cast<const desctype*>(desc))) { \
+            delete objectimpl; \
+            break; \
+        } \
+        *object = objectimpl; \
+        break; \
+    }
+
 
 bool xGSimpl::CreateObject(GSobjecttype type, const void *desc, void **object)
 {
     switch (type) {
-        case GS_OBJECT_GEOMETRYBUFFER: {
-            xGSgeometrybufferImpl *buffer = new xGSgeometrybufferImpl();
-            if (!buffer->Allocate(*reinterpret_cast<const GSgeometrybufferdesc*>(desc))) {
-                delete buffer;
-                break;
-            }
-
-            *object = buffer;
-            break;
-        }
-
-        case GS_OBJECT_GEOMETRY: {
-            xGSgeometryImpl *geometry = new xGSgeometryImpl();
-            if (!geometry->Allocate(*reinterpret_cast<const GSgeometrydesc*>(desc))) {
-                delete geometry;
-                break;
-            }
-
-            *object = geometry;
-            break;
-        }
-
-        case GS_OBJECT_STATE: {
-            xGSstateImpl *state = new xGSstateImpl();
-            if (!state->Allocate(*reinterpret_cast<const GSstatedesc*>(desc))) {
-                delete state;
-                break;
-            }
-
-            *object = state;
-            break;
-        }
+        GS_CREATE_OBJECT(GS_OBJECT_GEOMETRYBUFFER, xGSgeometrybufferImpl, GSgeometrybufferdesc)
+        GS_CREATE_OBJECT(GS_OBJECT_GEOMETRY, xGSgeometryImpl, GSgeometrydesc)
+        GS_CREATE_OBJECT(GS_OBJECT_TEXTURE, xGStextureImpl, GStexturedesc)
+        GS_CREATE_OBJECT(GS_OBJECT_STATE, xGSstateImpl, GSstatedesc)
 
         default:
             // TODO: implement error codes
@@ -137,6 +144,7 @@ bool xGSimpl::CreateObject(GSobjecttype type, const void *desc, void **object)
     return true;
 }
 
+#undef GS_CREATE_OBJECT
 
 bool xGSimpl::GetRenderTargetSize(/* out */ GSsize &size)
 {
@@ -177,6 +185,8 @@ bool xGSimpl::Clear(bool clearcolor, bool cleardepth, bool clearstencil, const G
 
     glClear(mask);
 
+    TrackGLError();
+
     return true;
 }
 
@@ -191,7 +201,10 @@ bool xGSimpl::SetViewport(const GSviewport &viewport)
     GSsize sz;
     RenderTargetSize(sz);
 
-    glViewport(viewport.x, sz.height - viewport.y, viewport.width, viewport.height);
+    glViewport(
+        viewport.x, sz.height - viewport.height - viewport.y,
+        viewport.width, viewport.height
+    );
 
     return true;
 }
@@ -208,8 +221,12 @@ bool xGSimpl::SetState(xGSstate *state)
         return false;
     }
 
+    TrackGLError();
+
     xGSstateImpl *impl = static_cast<xGSstateImpl*>(state);
     impl->Apply();
+
+    TrackGLError();
 
     return true;
 }
@@ -223,23 +240,21 @@ bool xGSimpl::DrawGeometry(xGSgeometry *geometry)
 
     // TODO: checks
 
+    TrackGLError();
+
     xGSgeometryImpl *impl = static_cast<xGSgeometryImpl*>(geometry);
     if (impl->buffer()->indexBufferId()) {
-        // TODO: make this into utility func
-        GLenum type = 0;
-        GLuint size = 0;
-        switch (impl->buffer()->indexformat()) {
-            case GS_INDEX_WORD: type = GL_UNSIGNED_SHORT; size = 2; break;
-            case GS_INDEX_DWORD: type = GL_UNSIGNED_INT; size = 4; break;
-        }
-
         glDrawElementsBaseVertex(
-            impl->primtype(), impl->indexcount(), type,
-            reinterpret_cast<void*>(impl->baseindex() * size), impl->basevertex()
+            impl->primtype(), impl->indexcount(),
+            glindextype(impl->buffer()->indexformat()),
+            reinterpret_cast<void*>(indexsize(impl->buffer()->indexformat(), impl->baseindex())),
+            impl->basevertex()
         );
     } else  {
         glDrawArrays(impl->primtype(), impl->basevertex(), impl->vertexcount());
     }
+
+    TrackGLError();
 
     return true;
 }
@@ -252,6 +267,17 @@ bool xGSimpl::Display()
     }
 
     return SwapBuffers(p_windowdc) != 0;
+}
+
+void xGSimpl::TrackGLError()
+{
+#ifdef _DEBUG
+    GLenum error = glGetError();
+    if (error) {
+
+
+    }
+#endif
 }
 
 void xGSimpl::RenderTargetSize(/* out */ GSsize &size)

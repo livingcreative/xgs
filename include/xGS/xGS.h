@@ -8,13 +8,30 @@ enum GSformat
     GS_DEFAULT,
 
     // color formats (for framebuffers, render targets and textures)
-    GS_COLOR_32,
+    GS_COLOR_R,
+    GS_COLOR_RG,
+    GS_COLOR_RGBX,
+    GS_COLOR_RGBA,
+    GS_COLOR_R_HALF_FLOAT,
+    GS_COLOR_RG_HALF_FLOAT,
+    GS_COLOR_RGBX_HALF_FLOAT,
+    GS_COLOR_RGBA_HALF_FLOAT,
+    GS_COLOR_R_FLOAT,
+    GS_COLOR_RG_FLOAT,
+    GS_COLOR_RGBX_FLOAT,
+    GS_COLOR_RGBA_FLOAT,
 
     // depth formats (for framebuffers, render targets and textures)
+    GS_DEPTH_16,
+    GS_DEPTH_24,
     GS_DEPTH_32,
+    GS_DEPTH_32_FLOAT,
 
     // stencil formats
-    GS_STENCIL_8
+    GS_STENCIL_8,
+
+    // depth/stencil formats
+    GS_DEPTH_STENCIL_D24S8
 };
 
 
@@ -22,6 +39,7 @@ enum GSobjecttype
 {
     GS_OBJECT_GEOMETRYBUFFER,
     GS_OBJECT_GEOMETRY,
+    GS_OBJECT_TEXTURE,
     GS_OBJECT_STATE
 };
 
@@ -48,6 +66,17 @@ enum GSlockbuffer
     GS_LOCK_INDEXBUFFER
 };
 
+enum GSlocktexture
+{
+    GS_LOCK_TEXTURE,
+    GS_LOCK_POSX,
+    GS_LOCK_NEGX,
+    GS_LOCK_POSY,
+    GS_LOCK_NEGY,
+    GS_LOCK_POSZ,
+    GS_LOCK_NEGZ
+};
+
 enum GSlockflags
 {
     GS_READ  = 1 << 0,
@@ -68,6 +97,16 @@ enum GSprimitivetype
     GS_PRIM_TRIANGLES,
     GS_PRIM_TRIANGLESTRIP,
     GS_PRIM_TRIANGLEFAN
+};
+
+enum GStexturetype
+{
+    GS_TEXTURE_1D,
+    GS_TEXTURE_2D,
+    GS_TEXTURE_3D,
+    GS_TEXTURE_RECTANGLE,
+    GS_TEXTURE_CUBEMAP,
+    GS_TEXTURE_BUFFER
 };
 
 
@@ -114,6 +153,7 @@ struct GScolor
 class xGS;
 class xGSgeometrybuffer;
 class xGSgeometry;
+class xGStexture;
 class xGSstate;
 
 
@@ -146,13 +186,38 @@ struct GSgeometrybufferdesc
     unsigned int             flags;
 };
 
-
+// structure with geometry description,
+// declares primitive type, buffer where geometry data stored
 struct GSgeometrydesc
 {
     GSprimitivetype    type;
     xGSgeometrybuffer *buffer;
     unsigned int       vertexcount;
     unsigned int       indexcount;
+};
+
+// structure with texture description,
+// declares texture image format and size
+struct GStexturedesc
+{
+    GStexturetype type;
+    GSformat      format;
+    bool          sRGB;
+    unsigned int  width;
+    unsigned int  height;
+    unsigned int  depth;
+    unsigned int  layers;
+    unsigned int  levels;
+    unsigned int  multisample;
+
+    static GStexturedesc construct(GStexturetype type = GS_TEXTURE_2D, GSformat format = GS_COLOR_RGBA)
+    {
+        GStexturedesc result = {
+            type, format, false,
+            0, 0, 0, 0, 1, 0
+        };
+        return result;
+    }
 };
 
 
@@ -200,6 +265,17 @@ class xGSgeometry
 {
 public:
 
+};
+
+
+// xGS texture object
+// holds texture image and its format
+class xGStexture
+{
+public:
+    // lock/unlock texture level/layer data
+    virtual void *Lock(GSlocktexture lock, unsigned int level, unsigned int layer, unsigned int flags) = 0;
+    virtual bool Unlock() = 0;
 };
 
 

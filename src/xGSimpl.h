@@ -29,6 +29,8 @@ public:
     bool Display() override;
 
 private:
+    void TrackGLError();
+
     void RenderTargetSize(/* out */ GSsize &size);
 
 private:

@@ -2,6 +2,7 @@
 
 #include "xGS/xGS.h"
 #include "GL/glew.h"
+#include "xGSutil.h"
 
 
 class xGSgeometrybufferImpl : public xGSgeometrybuffer
@@ -31,6 +32,8 @@ private:
         VERTEX,
         INDEX
     };
+
+    VertexDecl    p_decl;
 
     GLuint        p_vertexbuffer;
     GLuint        p_indexbuffer;

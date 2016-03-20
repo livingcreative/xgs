@@ -76,40 +76,11 @@ bool xGSgeometrybufferImpl::Unlock()
 
 bool xGSgeometrybufferImpl::Allocate(const GSgeometrybufferdesc &desc)
 {
-    const GSvertexcomponent *comp = desc.components;
-    GLsizei vertezsize = 0;
-    while (comp->type != GS_LAST_COMPONENT) {
-        switch (comp->type) {
-            case GS_FLOAT:
-                vertezsize += sizeof(float);
-                break;
+    p_decl.reset(desc.components);
+    GLsizei vertezsize = p_decl.size();
 
-            case GS_VEC2:
-                vertezsize += sizeof(float) * 2;
-                break;
-
-            case GS_VEC3:
-                vertezsize += sizeof(float) * 3;
-                break;
-
-            case GS_VEC4:
-                vertezsize += sizeof(float) * 4;
-                break;
-
-            default:
-                // TODO: implement error codes
-                return false;
-        }
-
-        ++comp;
-    }
-
-    GLsizei indexsize = 0;
+    GLsizei indexsz = indexsize(desc.indexformat);
     p_indexformat = desc.indexformat;
-    switch (desc.indexformat) {
-        case GS_INDEX_WORD: indexsize = sizeof(GLushort); break;
-        case GS_INDEX_DWORD: indexsize = sizeof(GLuint); break;
-    }
 
     // TODO: consider desc.flags
     // TODO: use BufferStorage, if supported
@@ -119,10 +90,10 @@ bool xGSgeometrybufferImpl::Allocate(const GSgeometrybufferdesc &desc)
     glBufferData(GL_ARRAY_BUFFER, desc.vertexcount * vertezsize, nullptr, GL_STATIC_DRAW);
 
     // don't allocate index buffer if index format is GS_INDEX_NONE
-    if (indexsize) {
+    if (indexsz) {
         glGenBuffers(1, &p_indexbuffer);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, p_indexbuffer);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, desc.indexcount * indexsize, nullptr, GL_STATIC_DRAW);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, desc.indexcount * indexsz, nullptr, GL_STATIC_DRAW);
     }
 
     p_vertexcount = desc.vertexcount;
@@ -156,12 +127,12 @@ void xGSgeometrybufferImpl::DoUnlock()
 {
     // NOTE: call this after all state has been checked
     switch (p_locked) {
-        case GS_LOCK_VERTEXBUFFER:
+        case VERTEX:
             glBindBuffer(GL_ARRAY_BUFFER, p_vertexbuffer);
             glUnmapBuffer(GL_ARRAY_BUFFER);
             break;
 
-        case GS_LOCK_INDEXBUFFER:
+        case INDEX:
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, p_indexbuffer);
             glUnmapBuffer(GL_ELEMENT_ARRAY_BUFFER);
             break;

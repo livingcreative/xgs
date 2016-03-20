@@ -1,5 +1,6 @@
 #include "xGSstate.h"
 #include "xGSgeometrybuffer.h"
+#include "xGSutil.h"
 
 
 xGSstateImpl::xGSstateImpl() :
@@ -80,7 +81,6 @@ bool xGSstateImpl::Allocate(const GSstatedesc &desc)
 
     EnumProgramInputs();
 
-
     // find and bind static input
     GSinputslot *slot = desc.input;
     while (slot->type != GS_LAST_SLOT) {
@@ -105,13 +105,7 @@ bool xGSstateImpl::Allocate(const GSstatedesc &desc)
                 if (index != -1) {
                     glEnableVertexAttribArray(GLuint(index));
 
-                    GLint size = 0;
-                    switch (comp->type) {
-                        case GS_FLOAT: size = 1; break;
-                        case GS_VEC2: size = 2; break;
-                        case GS_VEC3: size = 3; break;
-                        case GS_VEC4: size = 4; break;
-                    }
+                    GLint size = vertexcomponentcount(comp->type);
 
                     glVertexAttribPointer(
                         index, size, GL_FLOAT, GL_FALSE, offset,
@@ -126,7 +120,6 @@ bool xGSstateImpl::Allocate(const GSstatedesc &desc)
 
         ++slot;
     }
-
 
     return true;
 }
