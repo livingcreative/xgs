@@ -3,6 +3,11 @@
 #include "xGS/xGS.h"
 #include "GL/glew.h"
 #include <vector>
+#include <map>
+#include <string>
+
+
+class xGStextureImpl;
 
 
 class xGSstateImpl : public xGSstate
@@ -13,10 +18,11 @@ public:
 
     bool Allocate(const GSstatedesc &desc);
 
-    void Apply();
+    void Apply(const GLuint *samplers);
 
 private:
     void EnumProgramInputs();
+    void EnumProgramParameters();
 
 private:
     struct Attrib
@@ -28,8 +34,17 @@ private:
         GLint   location;
     };
 
+    struct Sampler
+    {
+        GLuint          slot;
+        xGStextureImpl *texture;
+        GLuint          sampler;
+    };
+
     GLuint p_program;
     GLuint p_vao;
 
     std::vector<Attrib> p_attribs;
+    std::vector<Sampler> p_samplers;
+    std::map<std::string, size_t> p_samplermap; // TODO: temprorary solution
 };

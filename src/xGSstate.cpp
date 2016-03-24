@@ -1,5 +1,6 @@
 #include "xGSstate.h"
 #include "xGSgeometrybuffer.h"
+#include "xGStexture.h"
 #include "xGSutil.h"
 
 
@@ -80,6 +81,7 @@ bool xGSstateImpl::Allocate(const GSstatedesc &desc)
     }
 
     EnumProgramInputs();
+    EnumProgramParameters();
 
     // find and bind static input
     GSinputslot *slot = desc.input;
@@ -121,13 +123,50 @@ bool xGSstateImpl::Allocate(const GSstatedesc &desc)
         ++slot;
     }
 
+    // find and bind static parameters
+    GSparametersset *set = desc.parameters;
+    while (set->type != GS_LAST_SET) {
+        if (set->type == GS_STATIC_SET) {
+            GSparametersslot *slot = set->slots;
+
+            size_t textureindex = 0;
+            while (slot->type != GS_LAST_PARAMETER) {
+                switch (slot->type) {
+                    case GS_TEXTURE: {
+                        auto s = p_samplermap.find(std::string(slot->name));
+                        if (s != p_samplermap.end()) {
+                            // TODO: validate parameters
+
+                            p_samplers[s->second].texture = static_cast<xGStextureImpl*>(set->textures[textureindex].texture);
+                            // TODO: store direct sampler handle after "owner" introduction
+                            p_samplers[s->second].sampler = set->textures[textureindex].sampler;
+                        }
+                        break;
+                    }
+                }
+
+                ++slot;
+            }
+        }
+
+        ++set;
+    }
+
     return true;
 }
 
-void xGSstateImpl::Apply()
+void xGSstateImpl::Apply(const GLuint *samplers)
 {
     glUseProgram(p_program);
     glBindVertexArray(p_vao);
+
+    // bind static texture parameters
+    // TODO: implement multibind
+    for (auto &&s : p_samplers) {
+        glActiveTexture(GL_TEXTURE0 + s.slot);
+        glBindTexture(s.texture->target(), s.texture->textureId());
+        glBindSampler(s.slot, samplers[s.sampler]);
+    }
 }
 
 void xGSstateImpl::EnumProgramInputs()
@@ -167,3 +206,46 @@ void xGSstateImpl::EnumProgramInputs()
     }
 }
 
+void xGSstateImpl::EnumProgramParameters()
+{
+    GLint activeuniforms = 0;
+    glGetProgramiv(p_program, GL_ACTIVE_UNIFORMS, &activeuniforms);
+
+    // NOTE: for debugging
+#ifdef _DEBUG
+    char buf[4096];
+    OutputDebugStringA("Program active uniforms:\n");
+#endif
+
+    for (GLint n = 0; n < activeuniforms; ++n) {
+        char name[1024];
+
+        GLsizei len = 0;
+        GLint size = 0;
+        GLenum type = 0;
+        glGetActiveUniform(p_program, n, sizeof(name), &len, &size, &type, name);
+        GLint location = glGetUniformLocation(p_program, name);
+
+        if (uniformissampler(type)) {
+            Sampler sampler = {
+                p_samplers.size(), nullptr
+            };
+
+            // assign texture slot for uniform
+            glUniform1i(location, p_samplers.size());
+
+            p_samplermap.insert(std::make_pair(std::string(name), p_samplers.size()));
+            p_samplers.emplace_back(sampler);
+        }
+
+    // NOTE: for debugging
+#ifdef _DEBUG
+        sprintf_s(
+            buf,
+            "       #%d %s %d %d %d\n",
+            n, name, location, size, type
+        );
+        OutputDebugStringA(buf);
+#endif
+    }
+}

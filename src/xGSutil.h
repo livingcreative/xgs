@@ -12,6 +12,24 @@ inline T umax(T a, T b)
 }
 
 
+inline bool uniformissampler(GLenum type)
+{
+    return
+        type == GL_SAMPLER_1D ||
+        type == GL_SAMPLER_1D_ARRAY ||
+        type == GL_SAMPLER_2D ||
+        type == GL_SAMPLER_2D_ARRAY ||
+        type == GL_SAMPLER_2D_MULTISAMPLE ||
+        type == GL_SAMPLER_2D_MULTISAMPLE_ARRAY ||
+        type == GL_SAMPLER_2D_RECT ||
+        type == GL_SAMPLER_CUBE ||
+        type == GL_SAMPLER_CUBE_MAP_ARRAY ||
+        type == GL_SAMPLER_3D ||
+        type == GL_SAMPLER_2D_SHADOW ||
+        type == GL_SAMPLER_2D_ARRAY_SHADOW;
+}
+
+
 inline GLenum glindextype(GSindexformat format)
 {
     switch (format) {
@@ -52,6 +70,19 @@ inline GLuint vertexcomponentsize(GSvertexcomponenttype type)
         case GS_VEC3: return 3 * sizeof(float);
         case GS_VEC4: return 4 * sizeof(float);
     }
+    return 0;
+}
+
+inline GLenum glwrapmode(GSwrapmode mode)
+{
+    switch (mode) {
+        case GS_WRAP_CLAMP:
+            return GL_CLAMP_TO_EDGE;
+
+        case GS_WRAP_REPEAT:
+            return GL_REPEAT;
+    }
+
     return 0;
 }
 

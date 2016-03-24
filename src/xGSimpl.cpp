@@ -89,6 +89,9 @@ bool xGSimpl::CreateRenderer(const GSrendererdesc &desc)
 
     TrackGLError();
 
+    memset(p_samplers, 0, sizeof(p_samplers));
+    p_samplerscount = 0;
+
     // make a basic setup for OpenGL
 
     return true;
@@ -100,6 +103,8 @@ bool xGSimpl::DestroyRenderer()
         // TODO: implement error codes
         return false;
     }
+
+    glDeleteSamplers(p_samplerscount, p_samplers);
 
     if (p_glcontext) {
         wglMakeCurrent(0, 0);
@@ -116,6 +121,50 @@ bool xGSimpl::DestroyRenderer()
     return true;
 }
 
+bool xGSimpl::CreateSamplers(GSsamplerdesc *samplers, unsigned int count)
+{
+    if (!p_glcontext) {
+        // TODO: implement error codes
+        return false;
+    }
+
+    // TODO: handle 2nd calls
+
+    // TODO: remove magic number
+    if (count > 8) {
+        count = 8;
+    }
+
+    p_samplerscount = count;
+    glGenSamplers(p_samplerscount, p_samplers);
+    for (unsigned int n = 0; n < count; ++n) {
+        switch (samplers->filter) {
+            case GS_FILTER_NEAREST:
+                glSamplerParameteri(p_samplers[n], GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+                glSamplerParameteri(p_samplers[n], GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+                break;
+
+            case GS_FILTER_LINEAR:
+                glSamplerParameteri(p_samplers[n], GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+                glSamplerParameteri(p_samplers[n], GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+                break;
+
+            case GS_FILTER_TRILINEAR:
+                glSamplerParameteri(p_samplers[n], GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+                glSamplerParameteri(p_samplers[n], GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+                break;
+        }
+
+        glSamplerParameteri(p_samplers[n], GL_TEXTURE_WRAP_S, glwrapmode(samplers->wrapu));
+        glSamplerParameteri(p_samplers[n], GL_TEXTURE_WRAP_T, glwrapmode(samplers->wrapv));
+        glSamplerParameteri(p_samplers[n], GL_TEXTURE_WRAP_R, glwrapmode(samplers->wrapw));
+
+        ++samplers;
+    }
+
+    return true;
+}
+
 #define GS_CREATE_OBJECT(type, impl, desctype) \
     case type: { \
         impl *objectimpl = new impl(); \
@@ -126,7 +175,6 @@ bool xGSimpl::DestroyRenderer()
         *object = objectimpl; \
         break; \
     }
-
 
 bool xGSimpl::CreateObject(GSobjecttype type, const void *desc, void **object)
 {
@@ -224,7 +272,7 @@ bool xGSimpl::SetState(xGSstate *state)
     TrackGLError();
 
     xGSstateImpl *impl = static_cast<xGSstateImpl*>(state);
-    impl->Apply();
+    impl->Apply(p_samplers);
 
     TrackGLError();
 
@@ -255,6 +303,24 @@ bool xGSimpl::DrawGeometry(xGSgeometry *geometry)
     }
 
     TrackGLError();
+
+    return true;
+}
+
+bool xGSimpl::BuildMIPs(xGStexture *texture)
+{
+    if (!p_glcontext) {
+        // TODO: implement error codes
+        return false;
+    }
+
+    // TODO: checks
+
+    xGStextureImpl *impl = static_cast<xGStextureImpl*>(texture);
+    // TODO: prevent active texture state trashing
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(impl->target(), impl->textureId());
+    glGenerateMipmap(impl->target());
 
     return true;
 }

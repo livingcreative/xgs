@@ -84,6 +84,12 @@ void initialize(void *hwnd)
     gs->CreateObject(GS_OBJECT_GEOMETRY, &gdesc, reinterpret_cast<void**>(&boxgeom));
 
 
+    // allocate samplers
+    GSsamplerdesc samplers[] = {
+        GS_FILTER_TRILINEAR, GS_WRAP_REPEAT, GS_WRAP_REPEAT, GS_WRAP_REPEAT
+    };
+    gs->CreateSamplers(samplers, sizeof(samplers) / sizeof(samplers[0]));
+
     // create texture
 
     // TODO: load texture from file
@@ -91,6 +97,7 @@ void initialize(void *hwnd)
     GStexturedesc tdesc = GStexturedesc::construct();
     tdesc.width = 256;
     tdesc.height = 256;
+    tdesc.levels = 8;
     gs->CreateObject(GS_OBJECT_TEXTURE, &tdesc, reinterpret_cast<void**>(&tex));
     // test checker fill
     if (void *ptr = tex->Lock(GS_LOCK_TEXTURE, 0, 0, GS_WRITE)) {
@@ -100,8 +107,9 @@ void initialize(void *hwnd)
                 *pixel++ = ((x / 16 + y / 16) & 1) ? 0xFFFFFFFF : 0xFF000000;
             }
         }
-
         tex->Unlock();
+
+        gs->BuildMIPs(tex);
     }
 
 
@@ -111,8 +119,11 @@ void initialize(void *hwnd)
     };
 
     const char *vss[] = {
+        "#version 130\n"
         "in vec2 pos;\n"
+        "out vec2 texcoord;\n"
         "void main() {\n"
+        "   texcoord = pos;\n"
         "   gl_Position = vec4(pos, 0, 1);\n"
         "}",
         nullptr
@@ -120,11 +131,28 @@ void initialize(void *hwnd)
 
     const char *pss[] = {
         "#version 330\n"
+        "uniform sampler2D tex;\n"
+        "in vec2 texcoord;\n"
         "out vec4 color;\n"
         "void main() {\n"
-        "   color = vec4(1, 0, 0, 1);\n"
+        "   color = texture(tex, texcoord);\n"
         "}",
         nullptr
+    };
+
+    GSparametersslot slots[] = {
+        GS_TEXTURE, -1, "tex",
+        GS_LAST_PARAMETER
+    };
+
+    GStexturebinding textures[] = {
+        tex, 0,
+        nullptr
+    };
+
+    GSparametersset parameters[] = {
+        GS_STATIC_SET, slots, textures,
+        GS_LAST_SET
     };
 
     GSstatedesc statedesc = {
@@ -133,11 +161,10 @@ void initialize(void *hwnd)
         nullptr,
         nullptr,
         nullptr,
-        pss
+        pss,
+        parameters
     };
     gs->CreateObject(GS_OBJECT_STATE, &statedesc, reinterpret_cast<void**>(&state));
-
-
 }
 
 void step()

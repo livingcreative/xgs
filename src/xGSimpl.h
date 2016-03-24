@@ -17,6 +17,7 @@ public:
 
     bool GetRenderTargetSize(/* out */ GSsize &size) override;
 
+    bool CreateSamplers(GSsamplerdesc *samplers, unsigned int count) override;
     bool CreateObject(GSobjecttype type, const void *desc, void **object) override;
 
     bool Clear(bool clearcolor, bool cleardepth, bool clearstencil, const GScolor &color, float depth, unsigned int stencil) override;
@@ -25,6 +26,7 @@ public:
     bool SetState(xGSstate *state) override;
 
     bool DrawGeometry(xGSgeometry *geometry) override;
+    bool BuildMIPs(xGStexture *texture) override;
 
     bool Display() override;
 
@@ -34,7 +36,10 @@ private:
     void RenderTargetSize(/* out */ GSsize &size);
 
 private:
-    HWND  p_window;
-    HDC   p_windowdc;
-    HGLRC p_glcontext;
+    HWND   p_window;
+    HDC    p_windowdc;
+    HGLRC  p_glcontext;
+
+    GLuint p_samplers[8];
+    GLuint p_samplerscount;
 };

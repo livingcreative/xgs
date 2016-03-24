@@ -15,6 +15,10 @@ public:
 
     bool Allocate(const GStexturedesc &desc);
 
+public:
+    GLenum target() const { return p_target; }
+    GLuint textureId() const { return p_texture; }
+
 private:
     void AllocateTextureImage(const GStexturedesc &desc);
     void ComputeLevelSize(GLuint level, GLuint &w, GLuint &h, GLuint &d);

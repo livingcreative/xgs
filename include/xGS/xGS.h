@@ -90,6 +90,19 @@ enum GSinputslottype
     GS_DYNAMIC
 };
 
+enum GSparameterslottype
+{
+    GS_LAST_PARAMETER,
+    GS_TEXTURE
+};
+
+enum GSparameterssettype
+{
+    GS_LAST_SET,
+    GS_STATIC_SET,
+    GS_DYNAMIC_SET
+};
+
 enum GSprimitivetype
 {
     GS_PRIM_LINES,
@@ -97,6 +110,19 @@ enum GSprimitivetype
     GS_PRIM_TRIANGLES,
     GS_PRIM_TRIANGLESTRIP,
     GS_PRIM_TRIANGLEFAN
+};
+
+enum GSfiltertype
+{
+    GS_FILTER_NEAREST,
+    GS_FILTER_LINEAR,
+    GS_FILTER_TRILINEAR
+};
+
+enum GSwrapmode
+{
+    GS_WRAP_REPEAT,
+    GS_WRAP_CLAMP
 };
 
 enum GStexturetype
@@ -196,6 +222,18 @@ struct GSgeometrydesc
     unsigned int       indexcount;
 };
 
+// structure with sampler description,
+// declares sampler parameters (wrap mode, compare mode, filtering)
+struct GSsamplerdesc
+{
+    GSfiltertype filter;
+    GSwrapmode   wrapu;
+    GSwrapmode   wrapv;
+    GSwrapmode   wrapw;
+    // TODO: anisotropy
+    // TODO: compare mode
+};
+
 // structure with texture description,
 // declares texture image format and size
 struct GStexturedesc
@@ -233,6 +271,30 @@ struct GSinputslot
     xGSgeometrybuffer *buffer;
 };
 
+
+struct GStexturebinding
+{
+    xGStexture   *texture;
+    unsigned int  sampler;
+};
+
+
+struct GSparametersslot
+{
+    GSparameterslottype  type;
+    int                  biniding;
+    const char          *name;
+};
+
+
+struct GSparametersset
+{
+    GSparameterssettype  type;
+    GSparametersslot    *slots;
+    GStexturebinding    *textures;
+};
+
+
 // structure with sate object description
 // declares state object parameters, bindings and data
 struct GSstatedesc
@@ -244,6 +306,8 @@ struct GSstatedesc
     const char **es; // tess eval shader sources
     const char **gs; // geometry shader sources
     const char **ps; // pixel (fragment) shader sources
+
+    GSparametersset *parameters;
 };
 
 
@@ -302,6 +366,7 @@ public:
     virtual bool DestroyRenderer() = 0;
 
     // create object API (it's ugly, I know)
+    virtual bool CreateSamplers(GSsamplerdesc *samplers, unsigned int count) = 0;
     virtual bool CreateObject(GSobjecttype type, const void *desc, void **object) = 0;
 
     // different query APIs
@@ -316,6 +381,7 @@ public:
 
     // rendering API
     virtual bool DrawGeometry(xGSgeometry *geometry) = 0;
+    virtual bool BuildMIPs(xGStexture *texture) = 0;
 
     // present rendered data to screen/window
     virtual bool Display() = 0;
