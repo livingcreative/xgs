@@ -3,13 +3,14 @@
 #include "xGS/xGS.h"
 #include "GL/glew.h"
 #include "xGSutil.h"
+#include "xGSobject.h"
 
 
-class xGSgeometrybufferImpl : public xGSgeometrybuffer
+class xGSgeometrybufferImpl : public xGSobjectImpl<xGSgeometrybuffer>
 {
 public:
-    xGSgeometrybufferImpl();
-    ~xGSgeometrybufferImpl();
+    xGSgeometrybufferImpl(xGSimpl *owner);
+    ~xGSgeometrybufferImpl() override;
 
     // xGSgeometrybuffer interface implementation
     void *Lock(GSlockbuffer buffer, unsigned int flags) override;

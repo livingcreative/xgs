@@ -2,13 +2,14 @@
 
 #include "xGS/xGS.h"
 #include "GL/glew.h"
+#include "xGSobject.h"
 
 
-class xGStextureImpl : public xGStexture
+class xGStextureImpl : public xGSobjectImpl<xGStexture>
 {
 public:
-    xGStextureImpl();
-    ~xGStextureImpl();
+    xGStextureImpl(xGSimpl *owner);
+    ~xGStextureImpl() override;
 
     void *Lock(GSlocktexture lock, unsigned int level, unsigned int layer, unsigned int flags) override;
     bool Unlock() override;

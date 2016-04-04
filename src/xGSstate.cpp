@@ -1,10 +1,12 @@
 #include "xGSstate.h"
 #include "xGSgeometrybuffer.h"
+#include "xGSdatabuffer.h"
 #include "xGStexture.h"
 #include "xGSutil.h"
 
 
-xGSstateImpl::xGSstateImpl() :
+xGSstateImpl::xGSstateImpl(xGSimpl *owner) :
+    xGSobjectImpl(owner),
     p_program(0),
     p_vao(0)
 {}
@@ -81,7 +83,8 @@ bool xGSstateImpl::Allocate(const GSstatedesc &desc)
     }
 
     EnumProgramInputs();
-    EnumProgramParameters();
+    EnumProgramUniforms();
+    EnumProgramUniformBlocks();
 
     // find and bind static input
     GSinputslot *slot = desc.input;
@@ -130,6 +133,7 @@ bool xGSstateImpl::Allocate(const GSstatedesc &desc)
             GSparametersslot *slot = set->slots;
 
             size_t textureindex = 0;
+            size_t databufferindex = 0;
             while (slot->type != GS_LAST_PARAMETER) {
                 switch (slot->type) {
                     case GS_TEXTURE: {
@@ -138,8 +142,22 @@ bool xGSstateImpl::Allocate(const GSstatedesc &desc)
                             // TODO: validate parameters
 
                             p_samplers[s->second].texture = static_cast<xGStextureImpl*>(set->textures[textureindex].texture);
-                            // TODO: store direct sampler handle after "owner" introduction
-                            p_samplers[s->second].sampler = set->textures[textureindex].sampler;
+                            p_samplers[s->second].sampler = p_owner->samplerId(set->textures[textureindex].sampler);
+
+                            ++textureindex;
+                        }
+                        break;
+                    }
+
+                    case GS_DATABUFFER: {
+                        auto b = p_blockmap.find(std::string(slot->name));
+                        if (b != p_blockmap.end()) {
+                            // TODO: validate parameters
+
+                            p_blocks[b->second].buffer = static_cast<xGSdatabufferImpl*>(set->databuffers[databufferindex].buffer);
+                            p_blocks[b->second].offset = p_blocks[b->second].buffer->blockOffset(set->databuffers[databufferindex].block);
+
+                            ++databufferindex;
                         }
                         break;
                     }
@@ -155,7 +173,7 @@ bool xGSstateImpl::Allocate(const GSstatedesc &desc)
     return true;
 }
 
-void xGSstateImpl::Apply(const GLuint *samplers)
+void xGSstateImpl::Apply()
 {
     glUseProgram(p_program);
     glBindVertexArray(p_vao);
@@ -165,7 +183,16 @@ void xGSstateImpl::Apply(const GLuint *samplers)
     for (auto &&s : p_samplers) {
         glActiveTexture(GL_TEXTURE0 + s.slot);
         glBindTexture(s.texture->target(), s.texture->textureId());
-        glBindSampler(s.slot, samplers[s.sampler]);
+        glBindSampler(s.slot, s.sampler);
+    }
+
+    // bind static uniform blocks
+    GLuint bufferindex = 0;
+    for (auto &&b : p_blocks) {
+        glBindBufferRange(
+            GL_UNIFORM_BUFFER, bufferindex++,
+            b.buffer->bufferId(), b.offset, b.size
+        );
     }
 }
 
@@ -206,7 +233,7 @@ void xGSstateImpl::EnumProgramInputs()
     }
 }
 
-void xGSstateImpl::EnumProgramParameters()
+void xGSstateImpl::EnumProgramUniforms()
 {
     GLint activeuniforms = 0;
     glGetProgramiv(p_program, GL_ACTIVE_UNIFORMS, &activeuniforms);
@@ -218,7 +245,7 @@ void xGSstateImpl::EnumProgramParameters()
 #endif
 
     for (GLint n = 0; n < activeuniforms; ++n) {
-        char name[1024];
+        char name[256];
 
         GLsizei len = 0;
         GLint size = 0;
@@ -244,6 +271,41 @@ void xGSstateImpl::EnumProgramParameters()
             buf,
             "       #%d %s %d %d %d\n",
             n, name, location, size, type
+        );
+        OutputDebugStringA(buf);
+#endif
+    }
+}
+
+void xGSstateImpl::EnumProgramUniformBlocks()
+{
+    GLint activeblocks = 0;
+    glGetProgramiv(p_program, GL_ACTIVE_UNIFORM_BLOCKS, &activeblocks);
+
+    // NOTE: for debugging
+#ifdef _DEBUG
+    char buf[4096];
+    OutputDebugStringA("Program active uniform blocks:\n");
+#endif
+
+    for (GLint n = 0; n < activeblocks; ++n) {
+        p_blocks.emplace_back();
+        Block &block = p_blocks.back();
+        block.buffer = nullptr;
+
+        GLsizei len = 0;
+        glGetActiveUniformBlockName(p_program, n, sizeof(block.name), &len, block.name);
+
+        glGetActiveUniformBlockiv(p_program, n, GL_UNIFORM_BLOCK_DATA_SIZE, &block.size);
+
+        p_blockmap.insert(std::make_pair(std::string(block.name), p_blocks.size() - 1));
+
+    // NOTE: for debugging
+#ifdef _DEBUG
+        sprintf_s(
+            buf,
+            "       #%d %s %d\n",
+            n, block.name, block.size
         );
         OutputDebugStringA(buf);
 #endif

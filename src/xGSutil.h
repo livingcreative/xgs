@@ -69,6 +69,9 @@ inline GLuint vertexcomponentsize(GSvertexcomponenttype type)
         case GS_VEC2: return 2 * sizeof(float);
         case GS_VEC3: return 3 * sizeof(float);
         case GS_VEC4: return 4 * sizeof(float);
+        case GS_MAT2: return 4 * sizeof(float);
+        case GS_MAT3: return 9 * sizeof(float);
+        case GS_MAT4: return 16 * sizeof(float);
     }
     return 0;
 }

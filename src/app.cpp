@@ -34,6 +34,7 @@ static GLushort box_indices[] = {
 
 static xGSgeometrybuffer *buffer = nullptr;
 static xGSgeometry *boxgeom = nullptr;
+static xGSdatabuffer *transforms = nullptr;
 static xGStexture *tex = nullptr;
 static xGSstate *state = nullptr;
 
@@ -84,6 +85,30 @@ void initialize(void *hwnd)
     gs->CreateObject(GS_OBJECT_GEOMETRY, &gdesc, reinterpret_cast<void**>(&boxgeom));
 
 
+    // create data buffer for uniform storage
+    GSuniform mvp[] = {
+        GS_MAT4, 1,
+        GS_LAST_COMPONENT
+    };
+
+    GSuniformblock blocks[] = {
+        mvp, 1,
+        nullptr
+    };
+
+    GSdatabufferdesc dbdesc = {
+        blocks, 0
+    };
+    gs->CreateObject(GS_OBJECT_DATABUFFER, &dbdesc, reinterpret_cast<void**>(&transforms));
+
+    float mat[] = {
+        1, 0, 0, 0,
+        0, 1, 0, 0,
+        0, 0, 1, 0,
+        0, 0, 0, 1
+    };
+    transforms->Update(0, 0, 1, mat);
+
     // allocate samplers
     GSsamplerdesc samplers[] = {
         GS_FILTER_TRILINEAR, GS_WRAP_REPEAT, GS_WRAP_REPEAT, GS_WRAP_REPEAT
@@ -119,12 +144,15 @@ void initialize(void *hwnd)
     };
 
     const char *vss[] = {
-        "#version 130\n"
+        "#version 330\n"
         "in vec2 pos;\n"
         "out vec2 texcoord;\n"
+        "layout(std140) uniform Transforms {\n"
+        "    mat4x4 mvp_matrix;\n"
+        "};\n"
         "void main() {\n"
         "   texcoord = pos;\n"
-        "   gl_Position = vec4(pos, 0, 1);\n"
+        "   gl_Position = mvp_matrix * vec4(pos, 0, 1);\n"
         "}",
         nullptr
     };
@@ -141,6 +169,7 @@ void initialize(void *hwnd)
     };
 
     GSparametersslot slots[] = {
+        GS_DATABUFFER, -1, "Transforms",
         GS_TEXTURE, -1, "tex",
         GS_LAST_PARAMETER
     };
@@ -150,8 +179,13 @@ void initialize(void *hwnd)
         nullptr
     };
 
+    GSdatabufferbinding buffers[] = {
+        transforms, 0,
+        nullptr
+    };
+
     GSparametersset parameters[] = {
-        GS_STATIC_SET, slots, textures,
+        GS_STATIC_SET, slots, textures, buffers,
         GS_LAST_SET
     };
 
@@ -191,23 +225,27 @@ void step()
 void finalize()
 {
     if (boxgeom) {
-        // TODO: implement refcounting and remove delete
-        delete boxgeom;
+        boxgeom->Release();
     }
 
     if (state) {
-        // TODO: implement refcounting and remove delete
-        delete state;
+        state->Release();
+    }
+
+    if (tex) {
+        tex->Release();
+    }
+
+    if (transforms) {
+        transforms->Release();
     }
 
     if (buffer) {
-        // TODO: implement refcounting and remove delete
-        delete buffer;
+        buffer->Release();
     }
 
     if (gs) {
         gs->DestroyRenderer();
-        // TODO: implement refcounting and remove delete
-        delete gs;
+        gs->Release();
     }
 }

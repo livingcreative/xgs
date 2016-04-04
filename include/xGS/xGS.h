@@ -1,6 +1,53 @@
 #pragma once
 
 
+/*
+    xGS concepts
+        All xGS objects are immutable
+        Only object data can be modified after object has been created
+            (buffer content or texture image data)
+
+    xGS - represents system object which holds renderer and all internal structures
+
+    xGSgeometrybuffer - holds geometry data (vertex and index data)
+        Geometry buffer layout defined by GSvertexcomponent structures
+        Each GSvertexcomponent defines vertex attribute (its type and name)
+
+    xGSgeometry - holds data about single primitive (e.g. set of triangle to be drawn)
+        Geometry object defines type of primitives to be rendered
+        Source of geometry data (every geometry is bound to geometry buffer)
+        Location of vertex and index data inside geometry buffer and its size
+        Other parameters (primitive restart index, vertices in patch, etc)
+
+    xGStexture - holds texture image data and its format description
+
+    xGSstate - holds all pipeline state required for rendering
+        All shaders for programmable pipeline
+        All fixed rasterizer state (blending, depth/stencil test, etc)
+        Layout for shader input
+            Shader input layout declares how geometry (vertex) data is fed to shader
+            All input devided into slots
+            Every slot can be bound to geometry buffer (so it can hold several attributes)
+            Slot can be dynamic or static
+                Static slot bound to geometry buffer when state object created
+                Dynamic slots bound to their buffer via special input objects
+        Layout for shader parameters
+            Shader parameters are all uniform data (constants, buffers, textures)
+            Parameters devided into slots (like input)
+            Every slot is bound as a whole
+            Slots can be static or dynamic
+                Static slots bound to their resources when state object created
+                Dynamic slots bound to their resources with special state objects
+        Layout for shader output
+            Declares how shader outputs are mapped into render target buffers
+
+    xGSinput - defines connection between state inputs and geometry buffers
+
+    xGSparameters - defines connection between state parameters and their resources
+*/
+
+
+
 
 enum GSformat
 {
@@ -39,6 +86,7 @@ enum GSobjecttype
 {
     GS_OBJECT_GEOMETRYBUFFER,
     GS_OBJECT_GEOMETRY,
+    GS_OBJECT_DATABUFFER,
     GS_OBJECT_TEXTURE,
     GS_OBJECT_STATE
 };
@@ -50,7 +98,10 @@ enum GSvertexcomponenttype
     GS_FLOAT,
     GS_VEC2,
     GS_VEC3,
-    GS_VEC4
+    GS_VEC4,
+    GS_MAT2,
+    GS_MAT3,
+    GS_MAT4
 };
 
 enum GSindexformat
@@ -93,6 +144,7 @@ enum GSinputslottype
 enum GSparameterslottype
 {
     GS_LAST_PARAMETER,
+    GS_DATABUFFER,
     GS_TEXTURE
 };
 
@@ -179,6 +231,7 @@ struct GScolor
 class xGS;
 class xGSgeometrybuffer;
 class xGSgeometry;
+class xGSdatabuffer;
 class xGStexture;
 class xGSstate;
 
@@ -221,6 +274,27 @@ struct GSgeometrydesc
     unsigned int       vertexcount;
     unsigned int       indexcount;
 };
+
+
+struct GSuniform
+{
+    // TODO: think about common type enum for vertex components and uniform types
+    GSvertexcomponenttype type;
+    unsigned int          count;
+};
+
+struct GSuniformblock
+{
+    const GSuniform *uniforms;
+    unsigned int     count;
+};
+
+struct GSdatabufferdesc
+{
+    const GSuniformblock *blocks;
+    unsigned int          flags;
+};
+
 
 // structure with sampler description,
 // declares sampler parameters (wrap mode, compare mode, filtering)
@@ -279,6 +353,13 @@ struct GStexturebinding
 };
 
 
+struct GSdatabufferbinding
+{
+    xGSdatabuffer *buffer;
+    unsigned int   block;
+};
+
+
 struct GSparametersslot
 {
     GSparameterslottype  type;
@@ -292,6 +373,7 @@ struct GSparametersset
     GSparameterssettype  type;
     GSparametersslot    *slots;
     GStexturebinding    *textures;
+    GSdatabufferbinding *databuffers;
 };
 
 
@@ -311,10 +393,18 @@ struct GSstatedesc
 };
 
 
+class xGSrefcounted
+{
+public:
+    virtual void AddRef() = 0;
+    virtual void Release() = 0;
+};
+
+
 
 // xGS geometry buffer object
 // holds data for geometry - vertex and index data in one place
-class xGSgeometrybuffer
+class xGSgeometrybuffer : public xGSrefcounted
 {
 public:
     // lock/unlock buffer data
@@ -325,16 +415,30 @@ public:
 
 // xGS geometry object
 // holds data about geometry to be rendered
-class xGSgeometry
+class xGSgeometry : public xGSrefcounted
 {
 public:
 
 };
 
 
+// xGS data buffer object
+// holds uniform (constant) data
+class xGSdatabuffer : public xGSrefcounted
+{
+public:
+    // update specific value inside structured buffer
+    virtual bool Update(unsigned int slot, unsigned int parameter, unsigned int count, void *data) = 0;
+
+    // lock/unlock data range
+    virtual void *Lock(unsigned int offset, unsigned int size, unsigned int flags) = 0;
+    virtual bool Unlock() = 0;
+};
+
+
 // xGS texture object
 // holds texture image and its format
-class xGStexture
+class xGStexture : public xGSrefcounted
 {
 public:
     // lock/unlock texture level/layer data
@@ -349,7 +453,7 @@ public:
 //          * all shaders in pipline (vertex, pixel, geometry and tess)
 //          * resterizer, depth & stencil state
 //          * other fixed state (blending, filling, culling, etc.)
-class xGSstate
+class xGSstate : public xGSrefcounted
 {
 public:
     // now state object on its own, has no methods
@@ -358,7 +462,7 @@ public:
 
 // xGS system class, manages all initialization and lifetime of
 // library
-class xGS
+class xGS : public xGSrefcounted
 {
 public:
     // initialization and shutdown for renderer

@@ -2,27 +2,30 @@
 
 #include "xGS/xGS.h"
 #include "GL/glew.h"
+#include "xGSobject.h"
 #include <vector>
 #include <map>
 #include <string>
 
 
+class xGSdatabufferImpl;
 class xGStextureImpl;
 
 
-class xGSstateImpl : public xGSstate
+class xGSstateImpl : public xGSobjectImpl<xGSstate>
 {
 public:
-    xGSstateImpl();
-    ~xGSstateImpl();
+    xGSstateImpl(xGSimpl *owner);
+    ~xGSstateImpl() override;
 
     bool Allocate(const GSstatedesc &desc);
 
-    void Apply(const GLuint *samplers);
+    void Apply();
 
 private:
     void EnumProgramInputs();
-    void EnumProgramParameters();
+    void EnumProgramUniforms();
+    void EnumProgramUniformBlocks();
 
 private:
     struct Attrib
@@ -41,10 +44,20 @@ private:
         GLuint          sampler;
     };
 
+    struct Block
+    {
+        char               name[256];
+        GLint              size;
+        xGSdatabufferImpl *buffer;
+        unsigned int       offset;
+    };
+
     GLuint p_program;
     GLuint p_vao;
 
     std::vector<Attrib> p_attribs;
     std::vector<Sampler> p_samplers;
+    std::vector<Block> p_blocks;
     std::map<std::string, size_t> p_samplermap; // TODO: temprorary solution
+    std::map<std::string, size_t> p_blockmap; // TODO: temprorary solution
 };

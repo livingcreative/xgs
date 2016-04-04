@@ -2,16 +2,17 @@
 
 #include "xGS/xGS.h"
 #include "GL/glew.h"
+#include "xGSobject.h"
 
 
 class xGSgeometrybufferImpl;
 
 
-class xGSgeometryImpl : public xGSgeometry
+class xGSgeometryImpl : public xGSobjectImpl<xGSgeometry>
 {
 public:
-    xGSgeometryImpl();
-    ~xGSgeometryImpl();
+    xGSgeometryImpl(xGSimpl *owner);
+    ~xGSgeometryImpl() override;
 
     bool Allocate(const GSgeometrydesc &desc);
 

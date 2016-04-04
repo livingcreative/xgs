@@ -1,6 +1,7 @@
 #include "xGSimpl.h"
 #include "xGSgeometrybuffer.h"
 #include "xGSgeometry.h"
+#include "xGSdatabuffer.h"
 #include "xGStexture.h"
 #include "xGSstate.h"
 #include "xGSutil.h"
@@ -106,6 +107,16 @@ bool xGSimpl::DestroyRenderer()
 
     glDeleteSamplers(p_samplerscount, p_samplers);
 
+#ifdef _DEBUG
+    // all xGS objects should be deleted before renderer destruction
+    // check here for objects lists
+    CheckObjectList(p_geometrybufferlist, "GeometryBuffer");
+    CheckObjectList(p_geometrylist, "Geometry");
+    CheckObjectList(p_databufferlist, "DataBuffer");
+    CheckObjectList(p_texturelist, "Texture");
+    CheckObjectList(p_statelist, "State");
+#endif
+
     if (p_glcontext) {
         wglMakeCurrent(0, 0);
         wglDeleteContext(p_glcontext);
@@ -167,7 +178,7 @@ bool xGSimpl::CreateSamplers(GSsamplerdesc *samplers, unsigned int count)
 
 #define GS_CREATE_OBJECT(type, impl, desctype) \
     case type: { \
-        impl *objectimpl = new impl(); \
+        impl *objectimpl = new impl(this); \
         if (!objectimpl->Allocate(*reinterpret_cast<const desctype*>(desc))) { \
             delete objectimpl; \
             break; \
@@ -181,6 +192,7 @@ bool xGSimpl::CreateObject(GSobjecttype type, const void *desc, void **object)
     switch (type) {
         GS_CREATE_OBJECT(GS_OBJECT_GEOMETRYBUFFER, xGSgeometrybufferImpl, GSgeometrybufferdesc)
         GS_CREATE_OBJECT(GS_OBJECT_GEOMETRY, xGSgeometryImpl, GSgeometrydesc)
+        GS_CREATE_OBJECT(GS_OBJECT_DATABUFFER, xGSdatabufferImpl, GSdatabufferdesc)
         GS_CREATE_OBJECT(GS_OBJECT_TEXTURE, xGStextureImpl, GStexturedesc)
         GS_CREATE_OBJECT(GS_OBJECT_STATE, xGSstateImpl, GSstatedesc)
 
@@ -272,7 +284,7 @@ bool xGSimpl::SetState(xGSstate *state)
     TrackGLError();
 
     xGSstateImpl *impl = static_cast<xGSstateImpl*>(state);
-    impl->Apply(p_samplers);
+    impl->Apply();
 
     TrackGLError();
 
@@ -335,6 +347,25 @@ bool xGSimpl::Display()
     return SwapBuffers(p_windowdc) != 0;
 }
 
+#define IMPL_ADD_REMOVE_OBJECT(T, list) \
+void xGSimpl::AddObject(T *object) \
+{ \
+    list.insert(object); \
+} \
+\
+void xGSimpl::RemoveObject(T *object) \
+{ \
+    list.erase(list.find(object)); \
+}
+
+IMPL_ADD_REMOVE_OBJECT(xGSgeometrybuffer, p_geometrybufferlist)
+IMPL_ADD_REMOVE_OBJECT(xGSgeometry, p_geometrylist)
+IMPL_ADD_REMOVE_OBJECT(xGSdatabuffer, p_databufferlist)
+IMPL_ADD_REMOVE_OBJECT(xGStexture, p_texturelist)
+IMPL_ADD_REMOVE_OBJECT(xGSstate, p_statelist)
+
+#undef IMPL_ADD_REMOVE_OBJECT
+
 void xGSimpl::TrackGLError()
 {
 #ifdef _DEBUG
@@ -354,6 +385,20 @@ void xGSimpl::RenderTargetSize(/* out */ GSsize &size)
 
     size.width = rc.right;
     size.height = rc.bottom;
+}
+
+template <typename T>
+void xGSimpl::CheckObjectList(const T &list, const char *type)
+{
+    if (list.size()) {
+        // TODO: replace with xGS's debug output (when it will be implemented)
+        char buf[4096];
+        sprintf_s(
+            buf, "xGS debug: list %s still has %d objects!\n",
+            type, list.size()
+        );
+        OutputDebugStringA(buf);
+    }
 }
 
 

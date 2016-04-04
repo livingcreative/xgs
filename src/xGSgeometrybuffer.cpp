@@ -1,7 +1,8 @@
 #include "xGSgeometrybuffer.h"
 
 
-xGSgeometrybufferImpl::xGSgeometrybufferImpl() :
+xGSgeometrybufferImpl::xGSgeometrybufferImpl(xGSimpl *owner) :
+    xGSobjectImpl(owner),
     p_vertexbuffer(0),
     p_indexbuffer(0),
     p_locked(NONE),

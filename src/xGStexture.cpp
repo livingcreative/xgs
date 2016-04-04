@@ -2,7 +2,8 @@
 #include "xGSutil.h"
 
 
-xGStextureImpl::xGStextureImpl() :
+xGStextureImpl::xGStextureImpl(xGSimpl *owner) :
+    xGSobjectImpl(owner),
     p_texture(0),
     p_target(0),
     p_intformat(0),
