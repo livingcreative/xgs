@@ -161,7 +161,8 @@ enum GSprimitivetype
     GS_PRIM_LINESTRIP,
     GS_PRIM_TRIANGLES,
     GS_PRIM_TRIANGLESTRIP,
-    GS_PRIM_TRIANGLEFAN
+    GS_PRIM_TRIANGLEFAN,
+    GS_PRIM_PATCHES
 };
 
 enum GSfiltertype
@@ -185,6 +186,17 @@ enum GStexturetype
     GS_TEXTURE_RECTANGLE,
     GS_TEXTURE_CUBEMAP,
     GS_TEXTURE_BUFFER
+};
+
+enum GSdepthtesttype
+{
+    GS_DEPTHTEST_NONE,
+    GS_DEPTHTEST_LESS,
+    GS_DEPTHTEST_LEQUAL,
+    GS_DEPTHTEST_EQUAL,
+    GS_DEPTHTEST_GREATER,
+    GS_DEPTHTEST_GEQUAL,
+    GS_DEPTHTEST_ALWAYS
 };
 
 
@@ -273,6 +285,7 @@ struct GSgeometrydesc
     xGSgeometrybuffer *buffer;
     unsigned int       vertexcount;
     unsigned int       indexcount;
+    unsigned int       patchvertices;
 };
 
 
@@ -377,6 +390,13 @@ struct GSparametersset
 };
 
 
+struct GSdepthstencilstate
+{
+    GSdepthtesttype depthtest;
+    // TODO: stencil state, other depth params
+};
+
+
 // structure with sate object description
 // declares state object parameters, bindings and data
 struct GSstatedesc
@@ -390,6 +410,19 @@ struct GSstatedesc
     const char **ps; // pixel (fragment) shader sources
 
     GSparametersset *parameters;
+
+    GSdepthstencilstate depthstencil;
+
+    static GSstatedesc construct()
+    {
+        GSstatedesc result = {
+            nullptr,
+            nullptr, nullptr, nullptr, nullptr, nullptr,
+            nullptr,
+            GS_DEPTHTEST_LEQUAL
+        };
+        return result;
+    }
 };
 
 
@@ -428,7 +461,7 @@ class xGSdatabuffer : public xGSrefcounted
 {
 public:
     // update specific value inside structured buffer
-    virtual bool Update(unsigned int slot, unsigned int parameter, unsigned int count, void *data) = 0;
+    virtual bool Update(unsigned int slot, unsigned int parameter, unsigned int count, const void *data) = 0;
 
     // lock/unlock data range
     virtual void *Lock(unsigned int offset, unsigned int size, unsigned int flags) = 0;

@@ -7,6 +7,12 @@
 #include "GL/glew.h"
 
 
+struct GScaps
+{
+    GLint uboalignment;
+};
+
+
 class xGSimpl : public xGSrefcountedImpl<xGS>
 {
 public:
@@ -47,6 +53,8 @@ public:
 
     GLuint samplerId(unsigned int index) const { return p_samplers[index]; }
 
+    const GScaps &caps() const { return p_caps; }
+
 private:
     void TrackGLError();
 
@@ -74,4 +82,6 @@ private:
     DataBufferList      p_databufferlist;
     GeometryTextureList p_texturelist;
     StateList           p_statelist;
+
+    GScaps p_caps;
 };

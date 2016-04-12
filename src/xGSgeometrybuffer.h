@@ -23,7 +23,7 @@ public:
 
     GLuint vertexBufferId() const { return p_vertexbuffer; }
     GLuint indexBufferId() const { return p_indexbuffer; }
-
+    const VertexDecl &decl() const { return p_decl; }
     GSindexformat indexformat() const { return p_indexformat; }
 
 private:

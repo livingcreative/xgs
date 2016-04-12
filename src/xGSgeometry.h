@@ -22,6 +22,7 @@ public:
     GLuint indexcount() const { return p_indexcount; }
     GLuint basevertex() const { return p_basevertex; }
     GLuint baseindex() const { return p_baseindex; }
+    GLuint patchvertices() const { return p_patchvertices; }
 
 private:
     xGSgeometrybufferImpl *p_buffer;
@@ -30,4 +31,5 @@ private:
     GLuint                 p_indexcount;
     GLuint                 p_basevertex;
     GLuint                 p_baseindex;
+    GLuint                 p_patchvertices;
 };

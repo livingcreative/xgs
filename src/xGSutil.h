@@ -89,6 +89,26 @@ inline GLenum glwrapmode(GSwrapmode mode)
     return 0;
 }
 
+inline GLenum gldepthtest(GSdepthtesttype type)
+{
+    switch (type) {
+        case GS_DEPTHTEST_LESS:    return GL_LESS;
+        case GS_DEPTHTEST_LEQUAL:  return GL_LEQUAL;
+        case GS_DEPTHTEST_EQUAL:   return GL_EQUAL;
+        case GS_DEPTHTEST_GREATER: return GL_GREATER;
+        case GS_DEPTHTEST_GEQUAL:  return GL_GEQUAL;
+        case GS_DEPTHTEST_ALWAYS:  return GL_ALWAYS;
+    }
+
+    return 0;
+}
+
+template <typename T>
+inline T align(T value, T align)
+{
+    return (value + align - 1) & ~(align - 1);
+}
+
 class VertexDecl
 {
 public:

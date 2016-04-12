@@ -1,6 +1,10 @@
 #include "app.h"
 #include "xGS/xGS.h"
 
+#define _USE_MATH_DEFINES
+#include <cmath>
+#include "kcommon/c_geometry.h"
+
 // leave this for now, until all needed code moved to wrapper class
 #include <Windows.h>
 #include "GL/glew.h"
@@ -11,25 +15,68 @@ static xGS *gs = nullptr;
 
 
 GSvertexcomponent boxcomponents[] = {
-    GS_VEC2, -1, "pos",
+    GS_VEC3, -1, "pos",
+    GS_VEC3, -1, "norm",
+    GS_VEC2, -1, "tex",
     GS_LAST_COMPONENT
 };
 
 struct Vertex
 {
-    float x, y;
+    float x, y, z;    // position
+    float nx, ny, nz; // normal
+    float u, v;       // tex coords
 };
 
-static Vertex box[] = {
-    -0.5f, +0.5f,
-    +0.5f, +0.5f,
-    +0.5f, -0.5f,
-    -0.5f, -0.5f
+static Vertex cube[] = {
+//       x     y     z   nx    ny    nz  u  v
+    { -1.0,  1.0,  1.0, 0.0,  1.0,  0.0, 0, 1 },
+    {  1.0,  1.0,  1.0, 0.0,  1.0,  0.0, 1, 1 },
+    {  1.0,  1.0, -1.0, 0.0,  1.0,  0.0, 1, 0 },
+    { -1.0,  1.0, -1.0, 0.0,  1.0,  0.0, 0, 0 },
+
+    { -1.0,  1.0, -1.0, 0.0,  0.0, -1.0, 0, 1 },
+    {  1.0,  1.0, -1.0, 0.0,  0.0, -1.0, 1, 1 },
+    {  1.0, -1.0, -1.0, 0.0,  0.0, -1.0, 1, 0 },
+    { -1.0, -1.0, -1.0, 0.0,  0.0, -1.0, 0, 0 },
+
+    {  1.0,  1.0, -1.0, 1.0,  0.0,  0.0, 0, 1 },
+    {  1.0,  1.0,  1.0, 1.0,  0.0,  0.0, 1, 1 },
+    {  1.0, -1.0,  1.0, 1.0,  0.0,  0.0, 1, 0 },
+    {  1.0, -1.0, -1.0, 1.0,  0.0,  0.0, 0, 0 },
+
+    {  1.0,  1.0,  1.0, 0.0,  0.0,  1.0, 0, 1 },
+    { -1.0,  1.0,  1.0, 0.0,  0.0,  1.0, 1, 1 },
+    { -1.0, -1.0,  1.0, 0.0,  0.0,  1.0, 1, 0 },
+    {  1.0, -1.0,  1.0, 0.0,  0.0,  1.0, 0, 0 },
+
+    { -1.0,  1.0,  1.0, 1.0,  0.0,  0.0, 0, 1 },
+    { -1.0,  1.0, -1.0, 1.0,  0.0,  0.0, 1, 1 },
+    { -1.0, -1.0, -1.0, 1.0,  0.0,  0.0, 1, 0 },
+    { -1.0, -1.0,  1.0, 1.0,  0.0,  0.0, 0, 0 },
+
+    {  1.0, -1.0,  1.0, 0.0, -1.0,  0.0, 0, 1 },
+    { -1.0, -1.0,  1.0, 0.0, -1.0,  0.0, 1, 1 },
+    { -1.0, -1.0, -1.0, 0.0, -1.0,  0.0, 1, 0 },
+    {  1.0, -1.0, -1.0, 0.0, -1.0,  0.0, 0, 0 }
 };
 
-static GLushort box_indices[] = {
-    0, 1, 2,
-    2, 3, 0
+static GLushort cube_indices[] = {
+#if 0
+     0,  1,  3,  1,  2,  3,
+     4,  5,  7,  5,  6,  7,
+     8,  9, 11,  9, 10, 11,
+    12, 13, 15, 13, 14, 15,
+    16, 17, 19, 17, 18, 19,
+    20, 21, 23, 21, 22, 23
+#else
+     0,  1,  2,  3,
+     4,  5,  6,  7,
+     8,  9, 10, 11,
+    12, 13, 14, 15,
+    16, 17, 18, 19,
+    20, 21, 22, 23
+#endif
 };
 
 static xGSgeometrybuffer *buffer = nullptr;
@@ -38,6 +85,8 @@ static xGSdatabuffer *transforms = nullptr;
 static xGStexture *tex = nullptr;
 static xGSstate *state = nullptr;
 
+
+static c_geometry::mat4x4f world;
 
 
 void initialize(void *hwnd)
@@ -55,44 +104,51 @@ void initialize(void *hwnd)
         GS_DEFAULT  // use default stencil
     };
     if (!gs->CreateRenderer(rdesc)) {
-        // TODO: implement refcounting and remove delete
-        delete gs;
+        gs->Release();
     }
 
     // create geometry buffer for storing box data, vertex and index buffers
     GSgeometrybufferdesc gbdesc = {
-        boxcomponents, 4, GS_INDEX_WORD, 6, 0
+        boxcomponents, 24, GS_INDEX_WORD, 24, 0
     };
     gs->CreateObject(GS_OBJECT_GEOMETRYBUFFER, &gbdesc, reinterpret_cast<void**>(&buffer));
 
     // fill in vertex data
     if (void *ptr = buffer->Lock(GS_LOCK_VERTEXBUFFER, GS_WRITE)) {
-        memcpy(ptr, box, sizeof(box));
+        memcpy(ptr, cube, sizeof(cube));
         buffer->Unlock();
     }
     // fill in index data
     if (void *ptr = buffer->Lock(GS_LOCK_INDEXBUFFER, GS_WRITE)) {
-        memcpy(ptr, box_indices, sizeof(box_indices));
+        memcpy(ptr, cube_indices, sizeof(cube_indices));
         buffer->Unlock();
     }
 
     // create geometry object for box
     GSgeometrydesc gdesc = {
-        GS_PRIM_TRIANGLES,
+        GS_PRIM_PATCHES,
         buffer,
-        4, 6
+        24, 24,
+        4
     };
     gs->CreateObject(GS_OBJECT_GEOMETRY, &gdesc, reinterpret_cast<void**>(&boxgeom));
 
 
     // create data buffer for uniform storage
     GSuniform mvp[] = {
-        GS_MAT4, 1,
+        GS_MAT4, 1, // mvp matrix
+        GS_MAT4, 1, // normal matrix
+        GS_LAST_COMPONENT
+    };
+
+    GSuniform lightpos[] = {
+        GS_VEC4, 1,
         GS_LAST_COMPONENT
     };
 
     GSuniformblock blocks[] = {
         mvp, 1,
+        lightpos, 1,
         nullptr
     };
 
@@ -101,13 +157,9 @@ void initialize(void *hwnd)
     };
     gs->CreateObject(GS_OBJECT_DATABUFFER, &dbdesc, reinterpret_cast<void**>(&transforms));
 
-    float mat[] = {
-        1, 0, 0, 0,
-        0, 1, 0, 0,
-        0, 0, 1, 0,
-        0, 0, 0, 1
-    };
-    transforms->Update(0, 0, 1, mat);
+    c_geometry::vec4f lightdir(1, 1, -1, 0);
+    lightdir.normalize();
+    transforms->Update(1, 0, 1, &lightdir);
 
     // allocate samplers
     GSsamplerdesc samplers[] = {
@@ -145,14 +197,65 @@ void initialize(void *hwnd)
 
     const char *vss[] = {
         "#version 330\n"
-        "in vec2 pos;\n"
+        "in vec3 pos;\n"
+        "in vec3 norm;\n"
+        "in vec2 tex;\n"
+        "out vec3 vnormal;\n"
+        "out vec2 vtexcoord;\n"
+        "void main() {\n"
+        "    vnormal = norm;"
+        "    vtexcoord = tex;\n"
+        "    gl_Position = vec4(pos, 1);\n"
+        "}",
+        nullptr
+    };
+
+    const char *css[] = {
+        "#version 400\n"
+        "layout(vertices=4) out;\n"
+        "in vec3 vnormal[];\n"
+        "in vec2 vtexcoord[];\n"
+        "out vec3 ctlnormal[];\n"
+        "out vec2 ctltexcoord[];\n"
+        "void main() {\n"
+        "    if (gl_InvocationID == 0) {\n"
+        "        float inner = 16;\n"
+        "        float outer = 16;\n"
+        "        gl_TessLevelInner[0] = inner;\n"
+        "        gl_TessLevelInner[1] = inner;\n"
+        "        gl_TessLevelOuter[0] = outer;\n"
+        "        gl_TessLevelOuter[1] = outer;\n"
+        "        gl_TessLevelOuter[2] = outer;\n"
+        "        gl_TessLevelOuter[3] = outer;\n"
+        "    }\n"
+        "    gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;\n"
+        "    ctlnormal[gl_InvocationID] = vnormal[gl_InvocationID];\n"
+        "    ctltexcoord[gl_InvocationID] = vtexcoord[gl_InvocationID];\n"
+        "}",
+        nullptr
+    };
+
+    const char *ess[] = {
+        "#version 400\n"
+        "layout(quads, equal_spacing, ccw) in;\n"
+        "in vec3 ctlnormal[];\n"
+        "in vec2 ctltexcoord[];\n"
+        "out vec3 normal;\n"
         "out vec2 texcoord;\n"
         "layout(std140) uniform Transforms {\n"
         "    mat4x4 mvp_matrix;\n"
+        "    mat4x4 nrm_matrix;\n"
         "};\n"
         "void main() {\n"
-        "   texcoord = pos;\n"
-        "   gl_Position = mvp_matrix * vec4(pos, 0, 1);\n"
+        "    vec3 a = mix(gl_in[0].gl_Position, gl_in[1].gl_Position, gl_TessCoord.x).xyz;\n"
+        "    vec3 b = mix(gl_in[3].gl_Position, gl_in[2].gl_Position, gl_TessCoord.x).xyz;\n"
+        "    vec3 pos = mix(a, b, gl_TessCoord.y);\n"
+        "    pos = normalize(pos);\n" // "spherify cube"
+        "    vec2 tc0 = mix(ctltexcoord[0], ctltexcoord[1], gl_TessCoord.x);\n"
+        "    vec2 tc1 = mix(ctltexcoord[3], ctltexcoord[2], gl_TessCoord.x);\n"
+        "    normal = (nrm_matrix * vec4(pos, 1)).xyz;\n"
+        "    texcoord = mix(tc0, tc1, gl_TessCoord.y);\n"
+        "    gl_Position = mvp_matrix * vec4(pos, 1);\n"
         "}",
         nullptr
     };
@@ -160,16 +263,24 @@ void initialize(void *hwnd)
     const char *pss[] = {
         "#version 330\n"
         "uniform sampler2D tex;\n"
+        "in vec3 normal;\n"
         "in vec2 texcoord;\n"
         "out vec4 color;\n"
+        "layout(std140) uniform Light {\n"
+        "    vec4 lightdir;\n"
+        "};\n"
         "void main() {\n"
-        "   color = texture(tex, texcoord);\n"
+        "    float L = max(0, dot(normalize(normal), lightdir.xyz));\n"
+        "    color = texture(tex, texcoord) * L;\n"
+        //"    color = vec4(normalize(normal) * 0.5 + 0.5, 1);\n"
+        //"    color = texture(tex, texcoord);\n"
         "}",
         nullptr
     };
 
     GSparametersslot slots[] = {
         GS_DATABUFFER, -1, "Transforms",
+        GS_DATABUFFER, -1, "Light",
         GS_TEXTURE, -1, "tex",
         GS_LAST_PARAMETER
     };
@@ -181,6 +292,7 @@ void initialize(void *hwnd)
 
     GSdatabufferbinding buffers[] = {
         transforms, 0,
+        transforms, 1,
         nullptr
     };
 
@@ -189,16 +301,16 @@ void initialize(void *hwnd)
         GS_LAST_SET
     };
 
-    GSstatedesc statedesc = {
-        input,
-        vss,
-        nullptr,
-        nullptr,
-        nullptr,
-        pss,
-        parameters
-    };
+    GSstatedesc statedesc = GSstatedesc::construct();
+    statedesc.input = input;
+    statedesc.vs = vss;
+    statedesc.cs = css;
+    statedesc.es = ess;
+    statedesc.ps = pss;
+    statedesc.parameters = parameters;
     gs->CreateObject(GS_OBJECT_STATE, &statedesc, reinterpret_cast<void**>(&state));
+
+    world.rotatebyx(30);
 }
 
 void step()
@@ -209,6 +321,29 @@ void step()
 
     GSsize sz;
     gs->GetRenderTargetSize(sz);
+
+    world.rotatebyy(0.1f);
+
+    c_geometry::mat4x4f view;
+    view.translate(0, 0, 2);
+
+    c_geometry::mat4x4f proj;
+    proj.projectionL(90.0f, float(sz.width) / sz.height, 0.1f, 10.0f);
+
+    c_geometry::mat4x4f nrm = world * view;
+    nrm.inverse();
+    nrm.transpose();
+
+    c_geometry::mat4x4f tfm[] = {
+        world * view * proj,
+        c_geometry::mat4x4f(
+            c_geometry::vec4f(nrm.row(0).x, nrm.row(0).y, nrm.row(0).z, 0),
+            c_geometry::vec4f(nrm.row(1).x, nrm.row(1).y, nrm.row(1).z, 0),
+            c_geometry::vec4f(nrm.row(2).x, nrm.row(2).y, nrm.row(2).z, 0),
+            c_geometry::vec4f()
+        )
+    };
+    transforms->Update(0, 0, 1, tfm);
 
     gs->Clear(true, true, false, GScolor::construct(0, 0.5f, 0.5f));
 

@@ -101,6 +101,8 @@ bool xGSstateImpl::Allocate(const GSstatedesc &desc)
             glBindBuffer(GL_ARRAY_BUFFER, buffer->vertexBufferId());
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer->indexBufferId());
 
+            GLsizei stride = buffer->decl().size();
+
             // set up vertex attrib pointers (according to slot vertex components)
             GSvertexcomponent *comp = slot->decl;
             GLsizei offset = 0;
@@ -113,7 +115,7 @@ bool xGSstateImpl::Allocate(const GSstatedesc &desc)
                     GLint size = vertexcomponentcount(comp->type);
 
                     glVertexAttribPointer(
-                        index, size, GL_FLOAT, GL_FALSE, offset,
+                        index, size, GL_FLOAT, GL_FALSE, stride,
                         reinterpret_cast<void*>(offset)
                     );
 
@@ -170,6 +172,9 @@ bool xGSstateImpl::Allocate(const GSstatedesc &desc)
         ++set;
     }
 
+    p_depthtestenable = desc.depthstencil.depthtest != GS_DEPTHTEST_NONE;
+    p_depthtest = gldepthtest(desc.depthstencil.depthtest);
+
     return true;
 }
 
@@ -189,10 +194,21 @@ void xGSstateImpl::Apply()
     // bind static uniform blocks
     GLuint bufferindex = 0;
     for (auto &&b : p_blocks) {
-        glBindBufferRange(
-            GL_UNIFORM_BUFFER, bufferindex++,
-            b.buffer->bufferId(), b.offset, b.size
-        );
+        if (b.buffer) {
+            glBindBufferRange(
+                GL_UNIFORM_BUFFER, bufferindex,
+                b.buffer->bufferId(), b.offset, b.size
+            );
+        }
+        ++bufferindex;
+    }
+
+    // apply depth/stencil state
+    if (!p_depthtestenable) {
+        glDisable(GL_DEPTH_TEST);
+    } else {
+        glEnable(GL_DEPTH_TEST);
+        glDepthFunc(p_depthtest);
     }
 }
 
@@ -297,6 +313,8 @@ void xGSstateImpl::EnumProgramUniformBlocks()
         glGetActiveUniformBlockName(p_program, n, sizeof(block.name), &len, block.name);
 
         glGetActiveUniformBlockiv(p_program, n, GL_UNIFORM_BLOCK_DATA_SIZE, &block.size);
+
+        glUniformBlockBinding(p_program, n, n);
 
         p_blockmap.insert(std::make_pair(std::string(block.name), p_blocks.size() - 1));
 

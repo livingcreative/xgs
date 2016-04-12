@@ -27,6 +27,7 @@ bool xGSgeometryImpl::Allocate(const GSgeometrydesc &desc)
         case GS_PRIM_TRIANGLES: p_primtype = GL_TRIANGLES; break;
         case GS_PRIM_TRIANGLESTRIP: p_primtype = GL_TRIANGLE_STRIP; break;
         case GS_PRIM_TRIANGLEFAN: p_primtype = GL_TRIANGLE_FAN; break;
+        case GS_PRIM_PATCHES: p_primtype = GL_PATCHES; break;
     }
 
     // TODO: check for errors here
@@ -34,6 +35,7 @@ bool xGSgeometryImpl::Allocate(const GSgeometrydesc &desc)
 
     p_vertexcount = desc.vertexcount;
     p_indexcount = desc.indexcount;
+    p_patchvertices = desc.patchvertices;
 
     return true;
 }

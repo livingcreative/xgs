@@ -93,6 +93,9 @@ bool xGSimpl::CreateRenderer(const GSrendererdesc &desc)
     memset(p_samplers, 0, sizeof(p_samplers));
     p_samplerscount = 0;
 
+    // get caps
+    glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &p_caps.uboalignment);
+
     // make a basic setup for OpenGL
 
     return true;
@@ -303,6 +306,11 @@ bool xGSimpl::DrawGeometry(xGSgeometry *geometry)
     TrackGLError();
 
     xGSgeometryImpl *impl = static_cast<xGSgeometryImpl*>(geometry);
+
+    if (impl->primtype() == GL_PATCHES) {
+        glPatchParameteri(GL_PATCH_VERTICES, impl->patchvertices());
+    }
+
     if (impl->buffer()->indexBufferId()) {
         glDrawElementsBaseVertex(
             impl->primtype(), impl->indexcount(),

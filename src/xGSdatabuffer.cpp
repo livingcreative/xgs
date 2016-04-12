@@ -14,12 +14,17 @@ xGSdatabufferImpl::~xGSdatabufferImpl()
     }
 }
 
-bool xGSdatabufferImpl::Update(unsigned int slot, unsigned int parameter, unsigned int count, void *data)
+bool xGSdatabufferImpl::Update(unsigned int slot, unsigned int parameter, unsigned int count, const void *data)
 {
     // TODO: implement update
 
+    if (slot >= p_blocks.size()) {
+        // TODO: report error
+        return false;
+    }
+
     glBindBuffer(GL_UNIFORM_BUFFER, p_buffer);
-    glBufferSubData(GL_UNIFORM_BUFFER, 0, p_size, data);
+    glBufferSubData(GL_UNIFORM_BUFFER, p_blocks[slot].offset, p_blocks[slot].size, data);
 
     return true;
 }
@@ -61,9 +66,12 @@ bool xGSdatabufferImpl::Allocate(const GSdatabufferdesc &desc)
             ++uniform;
         }
 
-        // TODO: alignment
-        p_blocks.emplace_back(p_size);
-        p_size += blocksize * block->count;
+        Block b = {
+            p_size,
+            blocksize * block->count
+        };
+        p_blocks.emplace_back(b);
+        p_size += align(GLint(blocksize * block->count), p_owner->caps().uboalignment);
 
         ++block;
     }

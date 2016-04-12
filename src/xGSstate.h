@@ -55,6 +55,10 @@ private:
     GLuint p_program;
     GLuint p_vao;
 
+    bool   p_depthtestenable;
+    GLenum p_depthtest;
+
+
     std::vector<Attrib> p_attribs;
     std::vector<Sampler> p_samplers;
     std::vector<Block> p_blocks;
