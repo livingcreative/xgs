@@ -39,3 +39,10 @@ bool xGSgeometryImpl::Allocate(const GSgeometrydesc &desc)
 
     return true;
 }
+
+void xGSgeometryImpl::Setup()
+{
+    if (p_primtype == GL_PATCHES) {
+        glPatchParameteri(GL_PATCH_VERTICES, p_patchvertices);
+    }
+}

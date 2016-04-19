@@ -21,6 +21,8 @@
 
     xGStexture - holds texture image data and its format description
 
+    xGSframebuffer - holds description for frame buffer layout and attached textures
+
     xGSstate - holds all pipeline state required for rendering
         All shaders for programmable pipeline
         All fixed rasterizer state (blending, depth/stencil test, etc)
@@ -88,6 +90,7 @@ enum GSobjecttype
     GS_OBJECT_GEOMETRY,
     GS_OBJECT_DATABUFFER,
     GS_OBJECT_TEXTURE,
+    GS_OBJECT_FRAMEBUFFER,
     GS_OBJECT_STATE
 };
 
@@ -188,6 +191,20 @@ enum GStexturetype
     GS_TEXTURE_BUFFER
 };
 
+enum GSattachment
+{
+    GS_LAST_ATTACHMENT,
+    GS_ATTACHMENT0,
+    GS_ATTACHMENT1,
+    GS_ATTACHMENT2,
+    GS_ATTACHMENT3,
+    GS_ATTACHMENT4,
+    GS_ATTACHMENT5,
+    GS_ATTACHMENT6,
+    GS_ATTACHMENT7,
+    GS_ATTACHMENT_DEPTH
+};
+
 enum GSdepthtesttype
 {
     GS_DEPTHTEST_NONE,
@@ -245,6 +262,7 @@ class xGSgeometrybuffer;
 class xGSgeometry;
 class xGSdatabuffer;
 class xGStexture;
+class xGSframebuffer;
 class xGSstate;
 
 
@@ -341,6 +359,41 @@ struct GStexturedesc
             type, format, false,
             0, 0, 0, 0, 1, 0
         };
+        return result;
+    }
+};
+
+// frame buffer object attachment description
+// defines data for assignment given texture level/slice to FB attachment point
+struct GSframebufferattachment
+{
+    GSattachment   attachment;
+    xGStexture    *texture;
+    GSlocktexture  face;
+    unsigned int   level;
+    unsigned int   slice;
+};
+
+const unsigned int GS_MAX_FB_ATTACHMENTS = 8;
+
+// frame buffer object description struct, defines FB parameters and config
+struct GSframebufferdesc
+{
+    unsigned int             width;
+    unsigned int             height;
+    unsigned int             colortargets;
+    GSformat                 colorformats[GS_MAX_FB_ATTACHMENTS];
+    GSformat                 depthformat;
+    GSframebufferattachment *attachments;
+
+    static GSframebufferdesc construct()
+    {
+        GSframebufferdesc result = {
+            0, 0, 1
+        };
+
+        result.colorformats[0] = GS_DEFAULT;
+
         return result;
     }
 };
@@ -480,6 +533,15 @@ public:
 };
 
 
+// xGS framebuffer object
+// holds framebuffer configuration and attachments
+class xGSframebuffer : public xGSrefcounted
+{
+public:
+    // now state object on its own, has no methods
+};
+
+
 // xGS state object
 // holds all necessary graphics state for rendering complete primitives
 //      this includes (will include):
@@ -513,11 +575,13 @@ public:
     virtual bool Clear(bool clearcolor, bool cleardepth, bool clearstencil, const GScolor &color, float depth = 1, unsigned int stencil = 0) = 0;
 
     // immediate state API
+    virtual bool SetRenderTarget(xGSframebuffer *target) = 0;
     virtual bool SetViewport(const GSviewport &viewport) = 0;
     virtual bool SetState(xGSstate *state) = 0;
 
     // rendering API
     virtual bool DrawGeometry(xGSgeometry *geometry) = 0;
+    virtual bool DrawGeometryInstanced(xGSgeometry *geometry, unsigned int count) = 0;
     virtual bool BuildMIPs(xGStexture *texture) = 0;
 
     // present rendered data to screen/window

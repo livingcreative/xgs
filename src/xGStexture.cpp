@@ -243,6 +243,20 @@ bool xGStextureImpl::Allocate(const GStexturedesc &desc)
     return true;
 }
 
+GLenum xGStextureImpl::locktarget(GSlocktexture lock) const
+{
+    switch (lock) {
+        case GS_LOCK_POSX: return GL_TEXTURE_CUBE_MAP_POSITIVE_X;
+        case GS_LOCK_NEGX: return GL_TEXTURE_CUBE_MAP_NEGATIVE_X;
+        case GS_LOCK_POSY: return GL_TEXTURE_CUBE_MAP_POSITIVE_Y;
+        case GS_LOCK_NEGY: return GL_TEXTURE_CUBE_MAP_NEGATIVE_Y;
+        case GS_LOCK_POSZ: return GL_TEXTURE_CUBE_MAP_POSITIVE_Z;
+        case GS_LOCK_NEGZ: return GL_TEXTURE_CUBE_MAP_NEGATIVE_Z;
+    }
+
+    return p_target;
+}
+
 void xGStextureImpl::AllocateTextureImage(const GStexturedesc &desc)
 {
     switch (p_target) {
@@ -309,14 +323,7 @@ void xGStextureImpl::DoUnlock()
             case GL_TEXTURE_CUBE_MAP: {
                 GLenum target = p_target;
                 if (p_target == GL_TEXTURE_CUBE_MAP) {
-                    switch (p_lock) {
-                        case GS_LOCK_POSX: target = GL_TEXTURE_CUBE_MAP_POSITIVE_X; break;
-                        case GS_LOCK_NEGX: target = GL_TEXTURE_CUBE_MAP_NEGATIVE_X; break;
-                        case GS_LOCK_POSY: target = GL_TEXTURE_CUBE_MAP_POSITIVE_Y; break;
-                        case GS_LOCK_NEGY: target = GL_TEXTURE_CUBE_MAP_NEGATIVE_Y; break;
-                        case GS_LOCK_POSZ: target = GL_TEXTURE_CUBE_MAP_POSITIVE_Z; break;
-                        case GS_LOCK_NEGZ: target = GL_TEXTURE_CUBE_MAP_NEGATIVE_Z; break;
-                    }
+                    target = locktarget(p_lock);
                 }
                 glTexSubImage2D(target, p_locklevel, 0, 0, w, h, p_format, p_type, nullptr);
                 break;

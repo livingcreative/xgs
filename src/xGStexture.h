@@ -18,6 +18,7 @@ public:
 
 public:
     GLenum target() const { return p_target; }
+    GLenum locktarget(GSlocktexture lock) const;
     GLuint textureId() const { return p_texture; }
 
 private:

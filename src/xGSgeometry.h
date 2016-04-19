@@ -16,6 +16,7 @@ public:
 
     bool Allocate(const GSgeometrydesc &desc);
 
+public:
     xGSgeometrybufferImpl *buffer() const { return p_buffer; }
     GLenum primtype() const { return p_primtype; }
     GLuint vertexcount() const { return p_vertexcount; }
@@ -23,6 +24,8 @@ public:
     GLuint basevertex() const { return p_basevertex; }
     GLuint baseindex() const { return p_baseindex; }
     GLuint patchvertices() const { return p_patchvertices; }
+
+    void Setup();
 
 private:
     xGSgeometrybufferImpl *p_buffer;

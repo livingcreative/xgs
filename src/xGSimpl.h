@@ -13,6 +13,9 @@ struct GScaps
 };
 
 
+class xGSframebufferImpl;
+
+
 class xGSimpl : public xGSrefcountedImpl<xGS>
 {
 public:
@@ -30,10 +33,12 @@ public:
 
     bool Clear(bool clearcolor, bool cleardepth, bool clearstencil, const GScolor &color, float depth, unsigned int stencil) override;
 
+    bool SetRenderTarget(xGSframebuffer *target) override;
     bool SetViewport(const GSviewport &viewport) override;
     bool SetState(xGSstate *state) override;
 
     bool DrawGeometry(xGSgeometry *geometry) override;
+    bool DrawGeometryInstanced(xGSgeometry *geometry, unsigned int count) override;
     bool BuildMIPs(xGStexture *texture) override;
 
     bool Display() override;
@@ -47,6 +52,7 @@ public:
     DECLARE_ADD_REMOVE_OBJECT(xGSgeometry)
     DECLARE_ADD_REMOVE_OBJECT(xGSdatabuffer)
     DECLARE_ADD_REMOVE_OBJECT(xGStexture)
+    DECLARE_ADD_REMOVE_OBJECT(xGSframebuffer)
     DECLARE_ADD_REMOVE_OBJECT(xGSstate)
 
 #undef DECLARE_ADD_REMOVE_OBJECT
@@ -67,7 +73,8 @@ private:
     typedef std::unordered_set<xGSgeometrybuffer*> GeometryBufferList;
     typedef std::unordered_set<xGSgeometry*> GeometryList;
     typedef std::unordered_set<xGSdatabuffer*> DataBufferList;
-    typedef std::unordered_set<xGStexture*> GeometryTextureList;
+    typedef std::unordered_set<xGStexture*> TextureList;
+    typedef std::unordered_set<xGSframebuffer*> FramebufferList;
     typedef std::unordered_set<xGSstate*> StateList;
 
     HWND   p_window;
@@ -80,8 +87,11 @@ private:
     GeometryBufferList  p_geometrybufferlist;
     GeometryList        p_geometrylist;
     DataBufferList      p_databufferlist;
-    GeometryTextureList p_texturelist;
+    TextureList         p_texturelist;
+    FramebufferList     p_framebufferlist;
     StateList           p_statelist;
 
     GScaps p_caps;
+
+    xGSframebufferImpl *p_rendertarget;
 };

@@ -3,6 +3,7 @@
 #include "xGSgeometry.h"
 #include "xGSdatabuffer.h"
 #include "xGStexture.h"
+#include "xGSframebuffer.h"
 #include "xGSstate.h"
 #include "xGSutil.h"
 
@@ -10,7 +11,8 @@
 xGSimpl::xGSimpl() :
     p_window(0),
     p_windowdc(0),
-    p_glcontext(0)
+    p_glcontext(0),
+    p_rendertarget(nullptr)
 {}
 
 xGSimpl::~xGSimpl()
@@ -108,6 +110,10 @@ bool xGSimpl::DestroyRenderer()
         return false;
     }
 
+    if (p_rendertarget) {
+        p_rendertarget->Unbind();
+    }
+
     glDeleteSamplers(p_samplerscount, p_samplers);
 
 #ifdef _DEBUG
@@ -117,6 +123,7 @@ bool xGSimpl::DestroyRenderer()
     CheckObjectList(p_geometrylist, "Geometry");
     CheckObjectList(p_databufferlist, "DataBuffer");
     CheckObjectList(p_texturelist, "Texture");
+    CheckObjectList(p_framebufferlist, "FrameBuffer");
     CheckObjectList(p_statelist, "State");
 #endif
 
@@ -197,6 +204,7 @@ bool xGSimpl::CreateObject(GSobjecttype type, const void *desc, void **object)
         GS_CREATE_OBJECT(GS_OBJECT_GEOMETRY, xGSgeometryImpl, GSgeometrydesc)
         GS_CREATE_OBJECT(GS_OBJECT_DATABUFFER, xGSdatabufferImpl, GSdatabufferdesc)
         GS_CREATE_OBJECT(GS_OBJECT_TEXTURE, xGStextureImpl, GStexturedesc)
+        GS_CREATE_OBJECT(GS_OBJECT_FRAMEBUFFER, xGSframebufferImpl, GSframebufferdesc)
         GS_CREATE_OBJECT(GS_OBJECT_STATE, xGSstateImpl, GSstatedesc)
 
         default:
@@ -253,6 +261,26 @@ bool xGSimpl::Clear(bool clearcolor, bool cleardepth, bool clearstencil, const G
     return true;
 }
 
+bool xGSimpl::SetRenderTarget(xGSframebuffer *target)
+{
+    if (!p_glcontext) {
+        // TODO: implement error codes
+        return false;
+    }
+
+    if (p_rendertarget) {
+        p_rendertarget->Unbind();
+    }
+
+    p_rendertarget = static_cast<xGSframebufferImpl*>(target);
+
+    if (p_rendertarget) {
+        p_rendertarget->Bind();
+    }
+
+    return true;
+}
+
 bool xGSimpl::SetViewport(const GSviewport &viewport)
 {
     if (!p_glcontext) {
@@ -284,12 +312,8 @@ bool xGSimpl::SetState(xGSstate *state)
         return false;
     }
 
-    TrackGLError();
-
     xGSstateImpl *impl = static_cast<xGSstateImpl*>(state);
     impl->Apply();
-
-    TrackGLError();
 
     return true;
 }
@@ -303,13 +327,9 @@ bool xGSimpl::DrawGeometry(xGSgeometry *geometry)
 
     // TODO: checks
 
-    TrackGLError();
-
     xGSgeometryImpl *impl = static_cast<xGSgeometryImpl*>(geometry);
 
-    if (impl->primtype() == GL_PATCHES) {
-        glPatchParameteri(GL_PATCH_VERTICES, impl->patchvertices());
-    }
+    impl->Setup();
 
     if (impl->buffer()->indexBufferId()) {
         glDrawElementsBaseVertex(
@@ -322,7 +342,33 @@ bool xGSimpl::DrawGeometry(xGSgeometry *geometry)
         glDrawArrays(impl->primtype(), impl->basevertex(), impl->vertexcount());
     }
 
-    TrackGLError();
+    return true;
+}
+
+bool xGSimpl::DrawGeometryInstanced(xGSgeometry *geometry, unsigned int count)
+{
+    if (!p_glcontext) {
+        // TODO: implement error codes
+        return false;
+    }
+
+    // TODO: checks
+
+    xGSgeometryImpl *impl = static_cast<xGSgeometryImpl*>(geometry);
+
+    impl->Setup();
+
+    if (impl->buffer()->indexBufferId()) {
+        glDrawElementsInstancedBaseVertex(
+            impl->primtype(), impl->indexcount(),
+            glindextype(impl->buffer()->indexformat()),
+            reinterpret_cast<void*>(indexsize(impl->buffer()->indexformat(), impl->baseindex())),
+            count,
+            impl->basevertex()
+        );
+    } else  {
+        glDrawArraysInstanced(impl->primtype(), impl->basevertex(), count, impl->vertexcount());
+    }
 
     return true;
 }
@@ -370,6 +416,7 @@ IMPL_ADD_REMOVE_OBJECT(xGSgeometrybuffer, p_geometrybufferlist)
 IMPL_ADD_REMOVE_OBJECT(xGSgeometry, p_geometrylist)
 IMPL_ADD_REMOVE_OBJECT(xGSdatabuffer, p_databufferlist)
 IMPL_ADD_REMOVE_OBJECT(xGStexture, p_texturelist)
+IMPL_ADD_REMOVE_OBJECT(xGSframebuffer, p_framebufferlist)
 IMPL_ADD_REMOVE_OBJECT(xGSstate, p_statelist)
 
 #undef IMPL_ADD_REMOVE_OBJECT
@@ -387,12 +434,16 @@ void xGSimpl::TrackGLError()
 
 void xGSimpl::RenderTargetSize(/* out */ GSsize &size)
 {
-    // TODO: reimplement when concept of multiple render targets implemented
-    RECT rc;
-    GetClientRect(p_window, &rc);
+    if (p_rendertarget == nullptr) {
+        RECT rc;
+        GetClientRect(p_window, &rc);
 
-    size.width = rc.right;
-    size.height = rc.bottom;
+        size.width = rc.right;
+        size.height = rc.bottom;
+    } else {
+        size.width = p_rendertarget->width();
+        size.height = p_rendertarget->height();
+    }
 }
 
 template <typename T>
