@@ -5,6 +5,7 @@
 #include "xGStexture.h"
 #include "xGSframebuffer.h"
 #include "xGSstate.h"
+#include "xGSparameters.h"
 #include "xGSutil.h"
 
 
@@ -125,6 +126,7 @@ bool xGSimpl::DestroyRenderer()
     CheckObjectList(p_texturelist, "Texture");
     CheckObjectList(p_framebufferlist, "FrameBuffer");
     CheckObjectList(p_statelist, "State");
+    CheckObjectList(p_parameterslist, "Parameters");
 #endif
 
     if (p_glcontext) {
@@ -206,6 +208,7 @@ bool xGSimpl::CreateObject(GSobjecttype type, const void *desc, void **object)
         GS_CREATE_OBJECT(GS_OBJECT_TEXTURE, xGStextureImpl, GStexturedesc)
         GS_CREATE_OBJECT(GS_OBJECT_FRAMEBUFFER, xGSframebufferImpl, GSframebufferdesc)
         GS_CREATE_OBJECT(GS_OBJECT_STATE, xGSstateImpl, GSstatedesc)
+        GS_CREATE_OBJECT(GS_OBJECT_PARAMETERS, xGSparametersImpl, GSparametersdesc)
 
         default:
             // TODO: implement error codes
@@ -268,6 +271,8 @@ bool xGSimpl::SetRenderTarget(xGSframebuffer *target)
         return false;
     }
 
+    TrackGLError();
+
     if (p_rendertarget) {
         p_rendertarget->Unbind();
     }
@@ -276,6 +281,8 @@ bool xGSimpl::SetRenderTarget(xGSframebuffer *target)
 
     if (p_rendertarget) {
         p_rendertarget->Bind();
+
+        TrackGLError();
     }
 
     return true;
@@ -313,6 +320,24 @@ bool xGSimpl::SetState(xGSstate *state)
     }
 
     xGSstateImpl *impl = static_cast<xGSstateImpl*>(state);
+    impl->Apply();
+
+    return true;
+}
+
+bool xGSimpl::SetParameters(xGSparameters *parameters)
+{
+    if (!p_glcontext) {
+        // TODO: implement error codes
+        return false;
+    }
+
+    if (parameters == nullptr) {
+        // TODO: implement error codes
+        return false;
+    }
+
+    xGSparametersImpl *impl = static_cast<xGSparametersImpl*>(parameters);
     impl->Apply();
 
     return true;
@@ -418,6 +443,7 @@ IMPL_ADD_REMOVE_OBJECT(xGSdatabuffer, p_databufferlist)
 IMPL_ADD_REMOVE_OBJECT(xGStexture, p_texturelist)
 IMPL_ADD_REMOVE_OBJECT(xGSframebuffer, p_framebufferlist)
 IMPL_ADD_REMOVE_OBJECT(xGSstate, p_statelist)
+IMPL_ADD_REMOVE_OBJECT(xGSparameters, p_parameterslist)
 
 #undef IMPL_ADD_REMOVE_OBJECT
 

@@ -17,6 +17,11 @@ GSvertexcomponent boxcomponents[] = {
     GS_LAST_COMPONENT
 };
 
+GSvertexcomponent quadcomponents[] = {
+    GS_VEC2, -1, "pos",
+    GS_LAST_COMPONENT
+};
+
 struct Vertex
 {
     float x, y, z;    // position
@@ -77,15 +82,39 @@ static unsigned short cube_indices[] = {
 #endif
 };
 
+
+struct QuadVertex
+{
+    float x;
+    float y;
+};
+
+static QuadVertex quadverts[] = {
+    -1,  1,
+     1,  1,
+     1, -1,
+    -1, -1
+};
+
+static unsigned short quadinds[] = {
+    0, 1, 2,
+    0, 2, 3
+};
+
+
 static xGSgeometrybuffer *buffer = nullptr;
 static xGSgeometry *boxgeom = nullptr;
+static xGSgeometrybuffer *quadbuffer = nullptr;
+static xGSgeometry *quad = nullptr;
 static xGSdatabuffer *transforms = nullptr;
 static xGStexture *tex = nullptr;
 static xGStexture *rendertex = nullptr;
 static xGSframebuffer *fb = nullptr;
 static xGSstate *state = nullptr;
+static xGSstate *statescr = nullptr;
 
 
+static GSsize screensize;
 static c_geometry::mat4x4f world;
 
 
@@ -95,6 +124,12 @@ enum UniformBlock
     POSITIONS,
     COLORS,
     LIGHT
+};
+
+enum Sampler
+{
+    NEAREST,
+    TRILINEAR
 };
 
 
@@ -136,6 +171,23 @@ void initialize(void *hwnd)
         buffer->Unlock();
     }
 
+    // create geometry buffer for storing quad data, vertex and index buffers
+    GSgeometrybufferdesc gbdesc2 = {
+        quadcomponents, 4, GS_INDEX_WORD, 6, 0
+    };
+    gs->CreateObject(GS_OBJECT_GEOMETRYBUFFER, &gbdesc2, reinterpret_cast<void**>(&quadbuffer));
+
+    // fill in vertex data
+    if (void *ptr = quadbuffer->Lock(GS_LOCK_VERTEXBUFFER, GS_WRITE)) {
+        memcpy(ptr, quadverts, sizeof(quadverts));
+        quadbuffer->Unlock();
+    }
+    // fill in index data
+    if (void *ptr = quadbuffer->Lock(GS_LOCK_INDEXBUFFER, GS_WRITE)) {
+        memcpy(ptr, quadinds, sizeof(quadinds));
+        quadbuffer->Unlock();
+    }
+
     // create geometry object for box
     GSgeometrydesc gdesc = {
 #ifdef USE_TESS
@@ -150,6 +202,14 @@ void initialize(void *hwnd)
 #endif
     };
     gs->CreateObject(GS_OBJECT_GEOMETRY, &gdesc, reinterpret_cast<void**>(&boxgeom));
+
+    // create geometry object for quad
+    GSgeometrydesc gdesc2 = {
+        GS_PRIM_TRIANGLES,
+        quadbuffer,
+        4, 6
+    };
+    gs->CreateObject(GS_OBJECT_GEOMETRY, &gdesc2, reinterpret_cast<void**>(&quad));
 
 
     // create data buffer for uniform storage
@@ -210,6 +270,7 @@ void initialize(void *hwnd)
 
     // allocate samplers
     GSsamplerdesc samplers[] = {
+        GS_FILTER_NEAREST, GS_WRAP_CLAMP, GS_WRAP_CLAMP, GS_WRAP_CLAMP,
         GS_FILTER_TRILINEAR, GS_WRAP_REPEAT, GS_WRAP_REPEAT, GS_WRAP_REPEAT
     };
     gs->CreateSamplers(samplers, sizeof(samplers) / sizeof(samplers[0]));
@@ -235,28 +296,6 @@ void initialize(void *hwnd)
 
         gs->BuildMIPs(tex);
     }
-
-
-    // create texture for rendering to
-    GStexturedesc rtdesc = GStexturedesc::construct();
-    rtdesc.width = 1024;
-    rtdesc.height = 1024;
-    rtdesc.levels = 10;
-    gs->CreateObject(GS_OBJECT_TEXTURE, &rtdesc, reinterpret_cast<void**>(&rendertex));
-
-
-    // create frame buffer
-    GSframebufferattachment fbattachments[] = {
-        GS_ATTACHMENT0, rendertex, GS_LOCK_TEXTURE, 0, 0,
-        GS_LAST_ATTACHMENT
-    };
-
-    GSframebufferdesc fbdesc = GSframebufferdesc::construct();
-    fbdesc.width = rtdesc.width;
-    fbdesc.height = rtdesc.height;
-    fbdesc.depthformat = GS_DEPTH_24;
-    fbdesc.attachments = fbattachments;
-    gs->CreateObject(GS_OBJECT_FRAMEBUFFER, &fbdesc, reinterpret_cast<void**>(&fb));
 
 
     GSinputslot input[] = {
@@ -399,7 +438,7 @@ void initialize(void *hwnd)
     };
 
     GStexturebinding textures[] = {
-        tex, 0,
+        tex, TRILINEAR,
         nullptr
     };
 
@@ -436,12 +475,123 @@ void step()
         return;
     }
 
-
-    // TODO: check rendering to texture via framebuffer
-
-
     GSsize sz;
     gs->GetRenderTargetSize(sz);
+
+    if (sz.width != screensize.width || sz.height != screensize.height) {
+        screensize = sz;
+
+        if (fb) {
+            fb->Release();
+        }
+
+        if (rendertex) {
+            rendertex->Release();
+        }
+
+        // create texture for rendering to
+        GStexturedesc rtdesc = GStexturedesc::construct();
+        rtdesc.width = sz.width;
+        rtdesc.height = sz.height;
+        gs->CreateObject(GS_OBJECT_TEXTURE, &rtdesc, reinterpret_cast<void**>(&rendertex));
+
+
+        // create frame buffer
+        GSframebufferattachment fbattachments[] = {
+            GS_ATTACHMENT0, rendertex, GS_LOCK_TEXTURE, 0, 0,
+            GS_LAST_ATTACHMENT
+        };
+
+        GSframebufferdesc fbdesc = GSframebufferdesc::construct();
+        fbdesc.width = rtdesc.width;
+        fbdesc.height = rtdesc.height;
+        fbdesc.depthformat = GS_DEPTH_24;
+        fbdesc.attachments = fbattachments;
+        gs->CreateObject(GS_OBJECT_FRAMEBUFFER, &fbdesc, reinterpret_cast<void**>(&fb));
+
+
+
+        // recreate state for rendering fullscreen quad (change to parameters object when
+        // it will be implemented)
+        if (statescr) {
+            statescr->Release();
+        }
+
+        GSinputslot input[] = {
+            GS_STATIC, quadcomponents, quadbuffer,
+            GS_LAST_SLOT
+        };
+
+        const char *vss[] = {
+            "#version 330\n"
+            "in vec2 pos;\n"
+            "out vec2 texcoord;\n"
+            "void main() {\n"
+            "    texcoord = (pos + 1) * 0.5;\n"
+            "    gl_Position = vec4(pos, 0, 1);\n"
+            "}",
+            nullptr
+        };
+
+        const char *pss[] = {
+            "#version 330\n"
+            "uniform sampler2D tex;\n"
+            "in vec2 texcoord;\n"
+            "out vec4 color;\n"
+
+            "const float filter_coef[9] = float[](\n"
+            "    -1.0, -1.0, -1.0,\n"
+            "    -1.0,  8.0, -1.0,\n"
+            "    -1.0, -1.0, -1.0\n"
+            ");\n"
+
+            "void main() {\n"
+            "    color = texture(tex, texcoord);\n"
+
+            "    vec2 pixelstep = 1.0 / textureSize(tex, 0);\n"
+
+            "    vec4 result = texture(tex, texcoord);\n"
+
+            "    vec4 f = result * filter_coef[4] +\n"
+            "        texture(tex, texcoord + vec2(-pixelstep.x, -pixelstep.y)) * filter_coef[0] +\n"
+            "        texture(tex, texcoord + vec2(           0, -pixelstep.y)) * filter_coef[1] +\n"
+            "        texture(tex, texcoord + vec2(+pixelstep.x, -pixelstep.y)) * filter_coef[2] +\n"
+            "        texture(tex, texcoord + vec2(-pixelstep.x, 0)) * filter_coef[3] +\n"
+            "        texture(tex, texcoord + vec2(+pixelstep.x, 0)) * filter_coef[5] +\n"
+            "        texture(tex, texcoord + vec2(-pixelstep.x, +pixelstep.y)) * filter_coef[6] +\n"
+            "        texture(tex, texcoord + vec2(           0, +pixelstep.y)) * filter_coef[7] +\n"
+            "        texture(tex, texcoord + vec2(+pixelstep.x, +pixelstep.y)) * filter_coef[8];\n"
+            "    f *= 1.0 / 6.0;\n"
+            "    f = vec4(dot(f, vec4(0.2126, 0.7152, 0.0722, 0.0)));\n"
+
+            "    color = f;\n"
+            "}",
+            nullptr
+        };
+
+        GSparametersslot slots[] = {
+            GS_TEXTURE, -1, "tex",
+            GS_LAST_PARAMETER
+        };
+
+        GStexturebinding textures[] = {
+            rendertex, NEAREST,
+            nullptr
+        };
+
+        GSparametersset parameters[] = {
+            GS_STATIC_SET, slots, textures, nullptr,
+            GS_LAST_SET
+        };
+
+        GSstatedesc statedesc = GSstatedesc::construct();
+        statedesc.input = input;
+        statedesc.vs = vss;
+        statedesc.ps = pss;
+        statedesc.parameters = parameters;
+        statedesc.depthstencil.depthtest = GS_DEPTHTEST_NONE;
+        gs->CreateObject(GS_OBJECT_STATE, &statedesc, reinterpret_cast<void**>(&statescr));
+    }
 
     world.rotatebyy(0.1f);
 
@@ -467,6 +617,9 @@ void step()
     };
     transforms->Update(TRANSFORMS, 0, 1, tfm);
 
+    // direct rendering to texture attached to framebuffer object
+    gs->SetRenderTarget(fb);
+
     gs->Clear(true, true, false, GScolor::construct(0, 0.5f, 0.5f));
 
     gs->SetViewport(GSviewport::construct(0, 0, sz.width, sz.height));
@@ -475,6 +628,14 @@ void step()
     gs->SetState(state);
 
     gs->DrawGeometryInstanced(boxgeom, 4);
+
+    // direct rendering to window/default framebuffer
+    gs->SetRenderTarget(nullptr);
+
+    //gs->Clear(true, true, false, GScolor::construct(0, 0.0f, 0.0f));
+
+    gs->SetState(statescr);
+    gs->DrawGeometry(quad);
 
     gs->Display();
 }
@@ -485,8 +646,16 @@ void finalize()
         boxgeom->Release();
     }
 
+    if (quad) {
+        quad->Release();
+    }
+
     if (state) {
         state->Release();
+    }
+
+    if (statescr) {
+        statescr->Release();
     }
 
     if (tex) {
@@ -499,6 +668,18 @@ void finalize()
 
     if (buffer) {
         buffer->Release();
+    }
+
+    if (quadbuffer) {
+        quadbuffer->Release();
+    }
+
+    if (fb) {
+        fb->Release();
+    }
+
+    if (rendertex) {
+        rendertex->Release();
     }
 
     if (gs) {

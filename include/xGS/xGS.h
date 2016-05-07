@@ -91,7 +91,8 @@ enum GSobjecttype
     GS_OBJECT_DATABUFFER,
     GS_OBJECT_TEXTURE,
     GS_OBJECT_FRAMEBUFFER,
-    GS_OBJECT_STATE
+    GS_OBJECT_STATE,
+    GS_OBJECT_PARAMETERS
 };
 
 
@@ -264,6 +265,7 @@ class xGSdatabuffer;
 class xGStexture;
 class xGSframebuffer;
 class xGSstate;
+class xGSparameters;
 
 
 // structure with renderer description,
@@ -479,6 +481,15 @@ struct GSstatedesc
 };
 
 
+struct GSparametersdesc
+{
+    xGSstate            *state;
+    unsigned int         slot;
+    GStexturebinding    *textures;
+    GSdatabufferbinding *databuffers;
+};
+
+
 class xGSrefcounted
 {
 public:
@@ -555,6 +566,16 @@ public:
 };
 
 
+// xGS parameters object
+// holds bindings for state parameters with their resources
+// for given parameter slot
+class xGSparameters : public xGSrefcounted
+{
+public:
+    // now state object on its own, has no methods
+};
+
+
 // xGS system class, manages all initialization and lifetime of
 // library
 class xGS : public xGSrefcounted
@@ -578,6 +599,7 @@ public:
     virtual bool SetRenderTarget(xGSframebuffer *target) = 0;
     virtual bool SetViewport(const GSviewport &viewport) = 0;
     virtual bool SetState(xGSstate *state) = 0;
+    virtual bool SetParameters(xGSparameters *parameters) = 0;
 
     // rendering API
     virtual bool DrawGeometry(xGSgeometry *geometry) = 0;

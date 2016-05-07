@@ -36,6 +36,7 @@ public:
     bool SetRenderTarget(xGSframebuffer *target) override;
     bool SetViewport(const GSviewport &viewport) override;
     bool SetState(xGSstate *state) override;
+    bool SetParameters(xGSparameters *parameters) override;
 
     bool DrawGeometry(xGSgeometry *geometry) override;
     bool DrawGeometryInstanced(xGSgeometry *geometry, unsigned int count) override;
@@ -54,6 +55,7 @@ public:
     DECLARE_ADD_REMOVE_OBJECT(xGStexture)
     DECLARE_ADD_REMOVE_OBJECT(xGSframebuffer)
     DECLARE_ADD_REMOVE_OBJECT(xGSstate)
+    DECLARE_ADD_REMOVE_OBJECT(xGSparameters)
 
 #undef DECLARE_ADD_REMOVE_OBJECT
 
@@ -76,6 +78,7 @@ private:
     typedef std::unordered_set<xGStexture*> TextureList;
     typedef std::unordered_set<xGSframebuffer*> FramebufferList;
     typedef std::unordered_set<xGSstate*> StateList;
+    typedef std::unordered_set<xGSparameters*> ParametersList;
 
     HWND   p_window;
     HDC    p_windowdc;
@@ -90,6 +93,7 @@ private:
     TextureList         p_texturelist;
     FramebufferList     p_framebufferlist;
     StateList           p_statelist;
+    ParametersList      p_parameterslist;
 
     GScaps p_caps;
 
