@@ -1,4 +1,4 @@
-# xgs
+﻿# xgs
 3D Graphics API low-level abstraction layer
 
 ## What is it
@@ -159,13 +159,23 @@ GSinputlayout input[] = {
 
 // specify shader source, vertex and pixel shaders is a minimum requirement for
 // rendering to work
-const char *vss = ;
+const char *vs[] = {
+    "#version 400 core\n"
+    "in vec3 pos;\n"
+    "void main() {\n"
+    "    gl_Position = vec4(pos, 1);\n"
+    "}\n",
+    nullptr
+};
 
-const char *pss = ;
-
-// currently multiple sources can be used for a single shader
-const char *vs[] = { vss, nullptr };
-const char *ps[] = { pss, nullptr };
+const char *ps[] = {
+    "#version 400 core\n"
+    "out vec4 result;"
+    "void main() {\n"
+    "    result = vec4(0, 1, 0, 1);\n"
+    "}\n",
+    nullptr
+};
 
 // set-up shader parameters layout
 GSparameterlayout parameters[] = {
@@ -224,7 +234,7 @@ gs->Release();
 ## Copyright and licensing
 xgs 3D Graphics API layer
 
-Copyright (C) 2015 � 2016, livingcreative (https://github.com/livingcreative)   
+Copyright (C) 2015 – 2016, livingcreative (https://github.com/livingcreative)   
 All rights reserved.
 
 Redistribution and use in source and/or binary forms, with or without 
