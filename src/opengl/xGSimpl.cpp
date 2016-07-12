@@ -1,13 +1,13 @@
-/*
+﻿/*
         xGS 3D Low-level rendering API
 
     Low-level 3D rendering wrapper API with multiple back-end support
 
-    (c) livingcreative, 2015
+    (c) livingcreative, 2015 - 2016
 
     https://github.com/livingcreative/xgs
 
-    xGSimpl.cpp
+    opengl/xGSimpl.cpp
         xGS API object implementation class
 */
 
@@ -236,14 +236,12 @@ GSbool xGSImpl::CreateRenderer(const GSrendererdescription &desc)
         debug(DebugMessageLevel::Information, "\t%s\n", cext);
     }
 #endif
-
 #ifdef GS_CONFIG_DEBUG_CALLBACK
     if (glDebugMessageCallback) {
         glDebugMessageCallback(errorCallback, this);
         glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
     }
 #endif
-
 #endif
 
 #if 0
@@ -300,7 +298,13 @@ GSbool xGSImpl::CreateRenderer(const GSrendererdescription &desc)
 
     glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &p_caps.max_active_attribs);
     glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &p_caps.max_texture_units);
-
+    //p_caps.multi_bind = false;//GLEW_ARB_multi_bind != 0;
+    //p_caps.multi_blend = true;//GLEW_ARB_draw_buffers_blend != 0;
+    //p_caps.vertex_format = false;//GLEW_ARB_vertex_attrib_binding != 0;
+    //p_caps.texture_srgb = true;//GLEW_EXT_texture_sRGB != 0;
+    //p_caps.texture_float = true;//GLEW_ARB_texture_float != 0;
+    //p_caps.texture_depth = true;//GLEW_ARB_depth_texture != 0;
+    //p_caps.texture_depthstencil = true;//GLEW_EXT_packed_depth_stencil != 0;
     // TODO: review caps (some are static, not run-time)
     p_caps.multi_bind           = GS_CAPS_MULTI_BIND;
     p_caps.multi_blend          = GS_CAPS_MULTI_BLEND;
@@ -309,22 +313,53 @@ GSbool xGSImpl::CreateRenderer(const GSrendererdescription &desc)
     p_caps.texture_float        = GS_CAPS_TEXTURE_FLOAT;
     p_caps.texture_depth        = GS_CAPS_TEXTURE_DEPTH;
     p_caps.texture_depthstencil = GS_CAPS_TEXTURE_DEPTHSTENCIL;
-
+    glGetIntegerv(GL_MAX_DRAW_BUFFERS, &p_caps.max_draw_buffers);
+    glGetIntegerv(GL_MAX_TEXTURE_SIZE, &p_caps.max_texture_size);
+    glGetIntegerv(GL_MAX_3D_TEXTURE_SIZE,  &p_caps.max_3d_texture_size);
+    glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS, &p_caps.max_array_texture_layers);
+    glGetIntegerv(GL_MAX_CUBE_MAP_TEXTURE_SIZE, &p_caps.max_cube_map_texture_size);
+    glGetIntegerv(GL_MAX_RECTANGLE_TEXTURE_SIZE, &p_caps.max_rectangle_texture_size);
+    glGetIntegerv(GL_MAX_TEXTURE_BUFFER_SIZE, &p_caps.max_texture_buffer_size);
+    p_caps.copy_image           = GS_CAPS_COPY_IMAGE;
+    p_caps.sparse_texture       = GS_CAPS_SPARSE_TEXTURE;
+    p_caps.sparse_buffer        = GS_CAPS_SPARSE_BUFFER;
+#ifdef GS_CONFIG_SPARSE_TEXTURE
+    glGetIntegerv(GL_MAX_SPARSE_TEXTURE_SIZE_ARB, &p_caps.max_sparse_texture_size);
+    glGetIntegerv(GL_MAX_SPARSE_3D_TEXTURE_SIZE_ARB, &p_caps.max_sparse_3dtexture_size);
+    glGetIntegerv(GL_MAX_SPARSE_ARRAY_TEXTURE_LAYERS_ARB, &p_caps.max_sparse_texture_layers);
+#endif
+#ifdef GS_CONFIG_SPARSE_BUFFER
+    glGetIntegerv(GL_SPARSE_BUFFER_PAGE_SIZE_ARB, &p_caps.sparse_buffer_pagesize);
+#endif
     glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &p_caps.ubo_alignment);
     glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &p_caps.max_ubo_size);
 
 #ifdef _DEBUG
-    debug(DebugMessageLevel::Information, "CAPS: max_active_attribs:   %i\n", p_caps.max_active_attribs);
-    debug(DebugMessageLevel::Information, "CAPS: max_texture_units:    %i\n", p_caps.max_texture_units);
-    debug(DebugMessageLevel::Information, "CAPS: multibind:            %s\n", p_caps.multi_bind ? "Yes" : "No");
-    debug(DebugMessageLevel::Information, "CAPS: multiblend:           %s\n", p_caps.multi_blend ? "Yes" : "No");
-    debug(DebugMessageLevel::Information, "CAPS: vertex format:        %s\n", p_caps.vertex_format ? "Yes" : "No");
-    debug(DebugMessageLevel::Information, "CAPS: ubo_alignment:        %i\n", p_caps.ubo_alignment);
-    debug(DebugMessageLevel::Information, "CAPS: max_ubo_size:         %i\n", p_caps.max_ubo_size);
-    debug(DebugMessageLevel::Information, "CAPS: texture sRGB:         %s\n", p_caps.texture_srgb ? "Yes" : "No");
-    debug(DebugMessageLevel::Information, "CAPS: texture float:        %s\n", p_caps.texture_float ? "Yes" : "No");
-    debug(DebugMessageLevel::Information, "CAPS: texture depth:        %s\n", p_caps.texture_depth ? "Yes" : "No");
-    debug(DebugMessageLevel::Information, "CAPS: texture depthstencil: %s\n", p_caps.texture_depthstencil ? "Yes" : "No");
+    debug(DebugMessageLevel::Information, "CAPS: max_active_attribs:        %i\n", p_caps.max_active_attribs);
+    debug(DebugMessageLevel::Information, "CAPS: max_texture_units:         %i\n", p_caps.max_texture_units);
+    debug(DebugMessageLevel::Information, "CAPS: multibind:                 %s\n", p_caps.multi_bind ? "Yes" : "No");
+    debug(DebugMessageLevel::Information, "CAPS: multiblend:                %s\n", p_caps.multi_blend ? "Yes" : "No");
+    debug(DebugMessageLevel::Information, "CAPS: vertex format:             %s\n", p_caps.vertex_format ? "Yes" : "No");
+    debug(DebugMessageLevel::Information, "CAPS: ubo_alignment:             %i\n", p_caps.ubo_alignment);
+    debug(DebugMessageLevel::Information, "CAPS: max_ubo_size:              %i\n", p_caps.max_ubo_size);
+    debug(DebugMessageLevel::Information, "CAPS: texture sRGB:              %s\n", p_caps.texture_srgb ? "Yes" : "No");
+    debug(DebugMessageLevel::Information, "CAPS: texture float:             %s\n", p_caps.texture_float ? "Yes" : "No");
+    debug(DebugMessageLevel::Information, "CAPS: texture depth:             %s\n", p_caps.texture_depth ? "Yes" : "No");
+    debug(DebugMessageLevel::Information, "CAPS: texture depthstencil:      %s\n", p_caps.texture_depthstencil ? "Yes" : "No");
+    debug(DebugMessageLevel::Information, "CAPS: max_draw_buffers:          %i\n", p_caps.max_draw_buffers);
+    debug(DebugMessageLevel::Information, "CAPS: max_texture_size:          %i\n", p_caps.max_texture_size);
+    debug(DebugMessageLevel::Information, "CAPS: max_3d_texture_size:       %i\n", p_caps.max_3d_texture_size);
+    debug(DebugMessageLevel::Information, "CAPS: max_array_texture_layers:  %i\n", p_caps.max_array_texture_layers);
+    debug(DebugMessageLevel::Information, "CAPS: max_cube_map_texture_size: %i\n", p_caps.max_cube_map_texture_size);
+    debug(DebugMessageLevel::Information, "CAPS: max_rect_texture_size:     %i\n", p_caps.max_rectangle_texture_size);
+    debug(DebugMessageLevel::Information, "CAPS: max_texture_buffer_size:   %i\n", p_caps.max_texture_buffer_size);
+    debug(DebugMessageLevel::Information, "CAPS: copy image:                %s\n", p_caps.copy_image ? "Yes" : "No");
+    debug(DebugMessageLevel::Information, "CAPS: sparse texture:            %s\n", p_caps.sparse_texture ? "Yes" : "No");
+    debug(DebugMessageLevel::Information, "CAPS: max_sparse_texture_size:   %i\n", p_caps.max_sparse_texture_size);
+    debug(DebugMessageLevel::Information, "CAPS: max_sparse_3dtexture_size: %i\n", p_caps.max_sparse_3dtexture_size);
+    debug(DebugMessageLevel::Information, "CAPS: max_sparse_texture_layers: %i\n", p_caps.max_sparse_texture_layers);
+    debug(DebugMessageLevel::Information, "CAPS: sparse buffer:             %s\n", p_caps.sparse_buffer ? "Yes" : "No");
+    debug(DebugMessageLevel::Information, "CAPS: sparse_buffer_pagesize:    %i\n", p_caps.sparse_buffer_pagesize);
 #endif
 
     AddTextureFormatDescriptor(GS_COLOR_RGBX, 4, GL_RGB8, GL_BGRA, GL_UNSIGNED_BYTE);
@@ -356,13 +391,11 @@ GSbool xGSImpl::CreateRenderer(const GSrendererdescription &desc)
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     glEnable(GL_POLYGON_OFFSET_FILL);
 
-    // TEMP
-    glPointSize(10.0f);
-
-
     memset(p_timerqueries, 0, sizeof(p_timerqueries));
     p_timerindex = 0;
+    p_opentimerqueries = 0;
     p_timerscount = 0;
+
 
 #ifdef _DEBUG
     debugTrackGLError("xGSImpl::CreateRenderer");
@@ -551,9 +584,6 @@ GSbool xGSImpl::Display()
     if (!ValidateState(RENDERER_READY, true, true, false)) {
         return GS_FALSE;
     }
-
-    // TODO: think about resetting timers here
-    p_timerindex = 0;
 
     return p_context->Display();
 }
@@ -1091,9 +1121,13 @@ static bool BindCopyObject(xGSObject *obj, GLenum copytarget)
 
 GSbool xGSImpl::CopyData(xGSObject *src, xGSObject *dst, GSuint readoffset, GSuint writeoffset, GSuint size, GSuint flags)
 {
-    // TODO: checks
+    if (!ValidateState(RENDERER_READY, true, false, false)) {
+        return GS_FALSE;
+    }
 
-    GSenum dsttype = static_cast<xGSUnknownObjectImpl*>(dst)->objecttype();
+    if (src == nullptr || dst == nullptr) {
+        return error(GSE_INVALIDOBJECT);
+    }
 
     if (!BindCopyObject(src, GL_COPY_READ_BUFFER)) {
         return error(GSE_INVALIDOPERATION);
@@ -1111,6 +1145,128 @@ GSbool xGSImpl::CopyData(xGSObject *src, xGSObject *dst, GSuint readoffset, GSui
     return error(GS_OK);
 }
 
+GSbool xGSImpl::BufferCommitment(xGSObject *buffer, GSuint offset, GSuint size, GSbool commit, GSuint flags)
+{
+    if (!ValidateState(RENDERER_READY, true, false, false)) {
+        return GS_FALSE;
+    }
+
+    if (buffer == nullptr) {
+        return error(GSE_INVALIDOBJECT);
+    }
+
+    // TODO: check for support, check for buffer is sparse
+
+    GSenum type = static_cast<xGSUnknownObjectImpl*>(buffer)->objecttype();
+
+    GLuint objectid = 0;
+    GLenum target = 0;
+    switch (type) {
+        // TODO: do we really need to commit geometry buffers separate from their geometries?
+        case GS_OBJECTTYPE_GEOMETRYBUFFER: {
+            xGSGeometryBufferImpl *impl = static_cast<xGSGeometryBufferImpl*>(buffer);
+            // TODO: consider flags to index buffer commit
+            objectid = impl->getVertexBufferID();
+            target = GL_ARRAY_BUFFER;
+            break;
+        }
+
+        case GS_OBJECTTYPE_DATABUFFER: {
+            xGSDataBufferImpl *impl = static_cast<xGSDataBufferImpl*>(buffer);
+            objectid = impl->getID();
+            target = impl->target();
+            break;
+        }
+
+        case GS_OBJECTTYPE_TEXTURE: {
+            xGSTextureImpl *impl = static_cast<xGSTextureImpl*>(buffer);
+            if (impl->target() != GL_TEXTURE_BUFFER) {
+                return error(GSE_INVALIDOBJECT);
+            }
+            objectid = impl->getID();
+            target = GL_TEXTURE_BUFFER;
+            break;
+        }
+
+        default:
+            return error(GSE_INVALIDOBJECT);
+    }
+
+    glBindBuffer(target, objectid);
+    glBufferPageCommitmentARB(target, offset, size, commit);
+
+    return error(GS_OK);
+}
+
+GSbool xGSImpl::GeometryBufferCommitment(IxGSGeometryBuffer buffer, IxGSGeometry *geometries, GSuint count, GSbool commit)
+{
+    if (!ValidateState(RENDERER_READY, true, false, false)) {
+        return GS_FALSE;
+    }
+
+    if (buffer == nullptr) {
+        return error(GSE_INVALIDOBJECT);
+    }
+
+    xGSGeometryBufferImpl *impl = static_cast<xGSGeometryBufferImpl*>(buffer);
+
+    GSuint vertexsize = impl->vertexDecl().buffer_size();
+    GSuint indexsize = index_buffer_size(impl->indexFormat());
+
+    // TODO: this breaks current input binding, resolve it
+    glBindBuffer(GL_ARRAY_BUFFER, impl->getVertexBufferID());
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, impl->getIndexBufferID());
+
+    for (GSuint n = 0; n < count; ++n) {
+        xGSGeometryImpl *geom = static_cast<xGSGeometryImpl*>(*geometries++);
+
+        if (geom->buffer() != impl) {
+            // skip
+            // TODO: think about skipping or error...
+            continue;
+        }
+
+        glBufferPageCommitmentARB(
+            GL_ARRAY_BUFFER, GLintptr(geom->vertexPtr()),
+            geom->vertexCount() * vertexsize, commit
+        );
+
+        if (geom->indexCount() == 0) {
+            continue;
+        }
+
+        glBufferPageCommitmentARB(
+            GL_ELEMENT_ARRAY_BUFFER, GLintptr(geom->indexPtr()),
+            geom->indexCount() * indexsize, commit
+        );
+    }
+
+    return error(GS_OK);
+}
+
+GSbool xGSImpl::TextureCommitment(IxGSTexture texture, GSuint level, GSuint x, GSuint y, GSuint z, GSuint width, GSuint height, GSuint depth, GSbool commit)
+{
+    if (!ValidateState(RENDERER_READY, true, false, false)) {
+        return GS_FALSE;
+    }
+
+    if (texture == nullptr) {
+        return error(GSE_INVALIDOBJECT);
+    }
+
+    xGSTextureImpl *tex = static_cast<xGSTextureImpl*>(texture);
+
+    if (tex->target() == GL_TEXTURE_BUFFER) {
+        return error(GSE_INVALIDOBJECT);
+    }
+
+    // TODO: this breaks state, resolve
+    glBindTexture(tex->target(), tex->getID());
+    glTexPageCommitmentARB(tex->target(), level, x, y, z, width, height, depth, commit);
+
+    return error(GS_OK);
+}
+
 GSbool xGSImpl::Compute(IxGSComputeState state, GSuint x, GSuint y, GSuint z)
 {
     // TODO:
@@ -1120,13 +1276,16 @@ GSbool xGSImpl::Compute(IxGSComputeState state, GSuint x, GSuint y, GSuint z)
 
 GSbool xGSImpl::BeginTimerQuery()
 {
-    // TODO: checks
+    if (!ValidateState(RENDERER_READY, false, true, false)) {
+        return GS_FALSE;
+    }
 
     if (p_timerqueries[p_timerindex] == 0) {
         glGenQueries(1, &p_timerqueries[p_timerindex]);
     }
 
     glBeginQuery(GL_TIME_ELAPSED, p_timerqueries[p_timerindex]);
+    ++p_opentimerqueries;
 
     ++p_timerindex;
     if (p_timerindex > p_timerscount) {
@@ -1138,8 +1297,15 @@ GSbool xGSImpl::BeginTimerQuery()
 
 GSbool xGSImpl::EndTimerQuery()
 {
-    // TODO: checks
+    if (!ValidateState(RENDERER_READY, false, true, false)) {
+        return GS_FALSE;
+    }
 
+    if (p_opentimerqueries == 0) {
+        return error(GSE_INVALIDOPERATION);
+    }
+
+    --p_opentimerqueries;
     glEndQuery(GL_TIME_ELAPSED);
 
     return GS_TRUE;
@@ -1147,7 +1313,10 @@ GSbool xGSImpl::EndTimerQuery()
 
 GSbool xGSAPI xGSImpl::TimstampQuery()
 {
-    // TODO: checks
+    if (!ValidateState(RENDERER_READY, false, true, false)) {
+        return GS_FALSE;
+    }
+
     // TODO: remove copypasta
 
     if (p_timerqueries[p_timerindex] == 0) {
@@ -1164,14 +1333,28 @@ GSbool xGSAPI xGSImpl::TimstampQuery()
     return GS_TRUE;
 }
 
-GSbool xGSImpl::GatherTimers(GSuint64 *values, GSuint count)
+GSbool xGSImpl::GatherTimers(GSuint flags, GSuint64 *values, GSuint count)
 {
-    // TODO: checks
+    if (!ValidateState(RENDERER_READY, false, true, false)) {
+        return GS_FALSE;
+    }
+
+    if (p_timerindex == 0) {
+        return error(GSE_INVALIDOPERATION);
+    }
 
     if (count >= p_timerindex) {
         GLint available = 0;
-        while (!available) {
+
+        if (flags) {
+            while (!available) {
+                glGetQueryObjectiv(p_timerqueries[p_timerindex - 1], GL_QUERY_RESULT_AVAILABLE, &available);
+            }
+        } else {
             glGetQueryObjectiv(p_timerqueries[p_timerindex - 1], GL_QUERY_RESULT_AVAILABLE, &available);
+            if (!available) {
+                return GS_FALSE;
+            }
         }
 
         for (GSuint n = 0; n < p_timerindex; ++n) {

@@ -1,13 +1,13 @@
-/*
+﻿/*
         xGS 3D Low-level rendering API
 
     Low-level 3D rendering wrapper API with multiple back-end support
 
-    (c) livingcreative, 2015
+    (c) livingcreative, 2015 - 2016
 
     https://github.com/livingcreative/xgs
 
-    xGSgeometrybuffer.h
+    opengl/xGSgeometrybuffer.h
         GeometryBuffer object implementation class header
             this object wraps buffer objects for storing geometry (mesh) data
             and format for vertex and index data
@@ -79,6 +79,18 @@ namespace xGS
 
         typedef std::vector<Primitive> PrimitiveList;
 
+        struct FreeBlock
+        {
+            GSptr  memory;
+            GSuint count;
+        };
+
+        typedef std::vector<FreeBlock> FreeBlockList;
+
+        bool allocateBlock(GSuint count, GSuint elementsize, GSuint maxcount, GSptr &memory, GSuint &current, FreeBlockList &list, size_t &block);
+        void commitFreeBlock(size_t block, FreeBlockList &list);
+        void freeBlock(GSptr memory, GSuint count, GSuint elementsize, GSuint &current, FreeBlockList &list);
+
     private:
         GSenum        p_type;
         GSvertexdecl  p_vertexdecl;
@@ -89,6 +101,12 @@ namespace xGS
         GSuint        p_indexcount;
         GSuint        p_currentvertex;
         GSuint        p_currentindex;
+
+        GSuint        p_vertexgranularity;
+        GSuint        p_indexgranularity;
+        FreeBlockList p_freevertices;
+        FreeBlockList p_freeindices;
+
         GSenum        p_locktype;
 
         // immediate cache data

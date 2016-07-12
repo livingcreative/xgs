@@ -1,13 +1,13 @@
-/*
+﻿/*
         xGS 3D Low-level rendering API
 
     Low-level 3D rendering wrapper API with multiple back-end support
 
-    (c) livingcreative, 2015
+    (c) livingcreative, 2015 - 2016
 
     https://github.com/livingcreative/xgs
 
-    xGStexture.cpp
+    opengl/xGStexture.cpp
         Texture object implementation class
 */
 
@@ -101,6 +101,7 @@ GSbool xGSTextureImpl::allocate(const GStexturedescription &desc)
     if (p_texturetype == GS_TEXTYPE_BUFFER) {
         glGenBuffers(1, &p_buffer);
         glBindBuffer(GL_TEXTURE_BUFFER, p_buffer);
+        // TODO: immutable buffer
         glBufferData(GL_TEXTURE_BUFFER, p_width * p_bpp, nullptr, GL_STATIC_DRAW);
         glTexBuffer(GL_TEXTURE_BUFFER, p_GLIntFormat, p_buffer);
     } else {
@@ -156,6 +157,7 @@ GSptr xGSTextureImpl::Lock(GSenum locktype, GSdword access, GSint level, GSint l
         }
         size *= p_bpp;
 
+        // TODO: immutable buffer
         glBufferData(buffer_target, size, nullptr, buffer_usage);
 
         if (access == GS_READ) {

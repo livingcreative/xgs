@@ -1,13 +1,13 @@
-/*
+﻿/*
         xGS 3D Low-level rendering API
 
     Low-level 3D rendering wrapper API with multiple back-end support
 
-    (c) livingcreative, 2015
+    (c) livingcreative, 2015 - 2016
 
     https://github.com/livingcreative/xgs
 
-    xGStexture.h
+    opengl/xGStexture.h
         Texture object implementation class header
             this object stores texture data and its format description
 */
@@ -38,6 +38,7 @@ namespace xGS
         GSbool allocate(const GStexturedescription &desc);
 
         GLuint getID() const { return p_texture; }
+        GLuint getBufferID() const { return p_buffer; }
         GLenum target() const { return p_target; }
         GSuint samples() const { return p_multisample; }
         GSenum format() const { return p_format; }

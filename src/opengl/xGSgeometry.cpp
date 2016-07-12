@@ -1,13 +1,13 @@
-/*
+﻿/*
         xGS 3D Low-level rendering API
 
     Low-level 3D rendering wrapper API with multiple back-end support
 
-    (c) livingcreative, 2015
+    (c) livingcreative, 2015 - 2016
 
     https://github.com/livingcreative/xgs
 
-    xGSgeometry.cpp
+    opengl/xGSgeometry.cpp
         Geometry object implementation class
 */
 
@@ -57,12 +57,6 @@ xGSGeometryImpl::~xGSGeometryImpl()
     if (p_buffer) {
         p_buffer->freeGeometry(p_vertexcount, p_indexcount, p_vertexmemory, p_indexmemory);
         p_buffer->Release();
-    } else {
-        if (p_vertexmemory)
-            p_owner->free(p_vertexmemory);
-
-        if (p_indexmemory)
-            p_owner->free(p_indexmemory);
     }
 
     p_owner->debug(DebugMessageLevel::Information, "Geometry object destroyed\n");

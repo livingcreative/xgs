@@ -1,13 +1,13 @@
-/*
+﻿/*
         xGS 3D Low-level rendering API
 
     Low-level 3D rendering wrapper API with multiple back-end support
 
-    (c) livingcreative, 2015
+    (c) livingcreative, 2015 - 2016
 
     https://github.com/livingcreative/xgs
 
-    xGSdatabuffer.cpp
+    opengl/xGSdatabuffer.cpp
         DataBuffer object implementation class
 */
 
@@ -121,7 +121,11 @@ GSbool xGSDataBufferImpl::allocate(const GSdatabufferdescription &desc)
 
     glGenBuffers(1, &p_buffer);
     glBindBuffer(p_target, p_buffer);
+#ifdef GS_CONFIG_BUFFER_STORAGE
+    glBufferStorage(p_target, p_size, nullptr, GL_MAP_WRITE_BIT | GL_DYNAMIC_STORAGE_BIT);
+#else
     glBufferData(p_target, p_size, nullptr, GL_STREAM_DRAW);
+#endif
 
     return p_owner->error(GS_OK);
 }

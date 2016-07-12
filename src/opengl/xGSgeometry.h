@@ -1,13 +1,13 @@
-/*
+﻿/*
         xGS 3D Low-level rendering API
 
     Low-level 3D rendering wrapper API with multiple back-end support
 
-    (c) livingcreative, 2015
+    (c) livingcreative, 2015 - 2016
 
     https://github.com/livingcreative/xgs
 
-    xGSgeometry.h
+    opengl/xGSgeometry.h
         Geometry object implementation class header
             this object defines parameters of static chunk of geometry (mesh)
             primitive type, vertex and index count and source buffer

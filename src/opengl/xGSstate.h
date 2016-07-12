@@ -1,13 +1,13 @@
-/*
+﻿/*
         xGS 3D Low-level rendering API
 
     Low-level 3D rendering wrapper API with multiple back-end support
 
-    (c) livingcreative, 2015
+    (c) livingcreative, 2015 - 2016
 
     https://github.com/livingcreative/xgs
 
-    xGSstate.h
+    opengl/xGSstate.h
         State object implementation class header
             state object holds most of the 3D rendering pipeline parameters
             and shaders for each pipeline stage
@@ -169,6 +169,8 @@ namespace xGS
         GSbool            p_sampleshading;
         GLenum            p_fill;
         bool              p_cull;
+        float             p_pointsize;
+        bool              p_programpointsize;
         GLenum            p_cullface;
         bool              p_colormask;
         bool              p_depthmask;

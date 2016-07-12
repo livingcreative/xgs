@@ -1,13 +1,13 @@
-/*
+﻿/*
         xGS 3D Low-level rendering API
 
     Low-level 3D rendering wrapper API with multiple back-end support
 
-    (c) livingcreative, 2015
+    (c) livingcreative, 2015 - 2016
 
     https://github.com/livingcreative/xgs
 
-    xGSframebuffer.cpp
+    opengl/xGSframebuffer.cpp
         FrameBuffer object implementation class
 */
 
@@ -511,10 +511,19 @@ void xGSFrameBufferImpl::attachTexture(const Attachment &texture, GLenum attachm
             case GL_TEXTURE_2D:
             case GL_TEXTURE_RECTANGLE:
             case GL_TEXTURE_2D_MULTISAMPLE:
-                glFramebufferTexture(
-                    GL_FRAMEBUFFER, attachment,
-                    texture.p_texture->getID(), texture.p_level
-                );
+            case GL_TEXTURE_CUBE_MAP:
+                if (texture.p_slice) {
+                    glFramebufferTexture2D(
+                        GL_FRAMEBUFFER, attachment, 
+                        cubemap_target_face(texture.p_slice),
+                        texture.p_texture->getID(), texture.p_level
+                    );
+                } else {
+                    glFramebufferTexture(
+                        GL_FRAMEBUFFER, attachment,
+                        texture.p_texture->getID(), texture.p_level
+                    );
+                }
                 break;
 
             case GL_TEXTURE_1D_ARRAY:
@@ -523,14 +532,6 @@ void xGSFrameBufferImpl::attachTexture(const Attachment &texture, GLenum attachm
                 glFramebufferTextureLayer(
                     GL_FRAMEBUFFER, attachment,
                     texture.p_texture->getID(), texture.p_level, texture.p_slice
-                );
-                break;
-
-            case GL_TEXTURE_CUBE_MAP:
-                glFramebufferTexture2D(
-                    GL_FRAMEBUFFER, attachment, 
-                    cubemap_target_face(texture.p_slice),
-                    texture.p_texture->getID(), texture.p_level
                 );
                 break;
 

@@ -1,13 +1,13 @@
-/*
+﻿/*
         xGS 3D Low-level rendering API
 
     Low-level 3D rendering wrapper API with multiple back-end support
 
-    (c) livingcreative, 2015
+    (c) livingcreative, 2015 - 2016
 
     https://github.com/livingcreative/xgs
 
-    xGSdatabuffer.h
+    opengl/xGSdatabuffer.h
         DataBuffer object implementation class header
             this object wraps buffer for holding uniform data which is used
             by shaders in state object
@@ -22,7 +22,7 @@
 namespace xGS
 {
 
-    // uniform buffer object
+    // data buffer object
     class xGSDataBufferImpl : public xGSObjectImpl<xGSDataBuffer, xGSDataBufferImpl>
     {
     public:
@@ -55,6 +55,7 @@ namespace xGS
 
         bool allocated() const { return p_buffer != 0; }
         GLuint getID() const { return p_buffer; }
+        GLenum target() const { return p_target; }
 
         GSuint blockCount() const { return GSuint(p_blocks.size()); }
         const UniformBlock& block(size_t index) const { return p_blocks[index]; }

@@ -1,13 +1,13 @@
-/*
+﻿/*
         xGS 3D Low-level rendering API
 
     Low-level 3D rendering wrapper API with multiple back-end support
 
-    (c) livingcreative, 2015
+    (c) livingcreative, 2015 - 2016
 
     https://github.com/livingcreative/xgs
 
-    xGSframebuffer.h
+    opengl/xGSframebuffer.h
         FrameBuffer object implementation class header
             this object is used for sotring render target frame buffer configuration
             and attached textures

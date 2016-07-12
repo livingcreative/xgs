@@ -1,13 +1,13 @@
-/*
+﻿/*
         xGS 3D Low-level rendering API
 
     Low-level 3D rendering wrapper API with multiple back-end support
 
-    (c) livingcreative, 2015
+    (c) livingcreative, 2015 - 2016
 
     https://github.com/livingcreative/xgs
 
-    xGSstate.cpp
+    opengl/xGSstate.cpp
         State object implementation class
 */
 
@@ -273,6 +273,7 @@ GSbool xGSStateImpl::allocate(const GSstatedescription &desc)
 
         if (paramset->settype == GSP_STATIC) {
             // bind static parameters
+            // TODO: failure handling
             p_staticstate.allocate(
                 p_owner, this, set,
                 paramset->uniforms, paramset->textures, nullptr
@@ -334,6 +335,8 @@ GSbool xGSStateImpl::allocate(const GSstatedescription &desc)
     p_fill = gl_fill_mode(desc.rasterizer.fill);
     p_cull = desc.rasterizer.cull != GS_CULL_NONE;
     p_cullface = gl_cull_face(desc.rasterizer.cull);
+    p_pointsize = desc.rasterizer.pointsize;
+    p_programpointsize = desc.rasterizer.programpointsize;
     p_colormask = desc.blend.writemask != 0;
     p_depthmask = desc.depthstencil.depthmask;
     p_depthtest = desc.depthstencil.depthtest != GS_DEPTHTEST_NONE;
@@ -406,6 +409,7 @@ void xGSStateImpl::setarrays(const GSvertexdecl &decl, GSuint divisor, GSptr ver
 void xGSStateImpl::setformat(const GSvertexdecl &decl, GSuint binding, GSuint divisor) const
 {
 #ifdef GS_CONFIG_SEPARATE_VERTEX_FORMAT
+    //GSint stride = decl.buffer_size();
     GSint offset = 0;
 
     for (auto const &i : decl.declaration())
@@ -453,6 +457,13 @@ void xGSStateImpl::apply(const GScaps &caps)
         } else {
             glEnable(GL_CULL_FACE);
             glCullFace(p_cullface);
+        }
+
+        if (p_programpointsize) {
+            glEnable(GL_PROGRAM_POINT_SIZE);
+        } else {
+            glDisable(GL_PROGRAM_POINT_SIZE);
+            glPointSize(p_pointsize);
         }
 
         glColorMask(p_colormask, p_colormask, p_colormask, p_colormask);

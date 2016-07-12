@@ -1,13 +1,13 @@
-/*
+﻿/*
         xGS 3D Low-level rendering API
 
     Low-level 3D rendering wrapper API with multiple back-end support
 
-    (c) livingcreative, 2015
+    (c) livingcreative, 2015 - 2016
 
     https://github.com/livingcreative/xgs
 
-    xGSimpl.h
+    opengl/xGSimpl.h
         xGS API object implementation class header
             implements main API (system) object
 */
@@ -112,12 +112,16 @@ namespace xGS
         ) override;
         GSbool xGSAPI CopyData(xGSObject *src, xGSObject *dst, GSuint readoffset, GSuint writeoffset, GSuint size, GSuint flags) override;
 
+        GSbool xGSAPI BufferCommitment(xGSObject *buffer, GSuint offset, GSuint size, GSbool commit, GSuint flags) override;
+        GSbool xGSAPI GeometryBufferCommitment(IxGSGeometryBuffer buffer, IxGSGeometry *geometries, GSuint count, GSbool commit) override;
+        GSbool xGSAPI TextureCommitment(IxGSTexture texture, GSuint level, GSuint x, GSuint y, GSuint z, GSuint width, GSuint height, GSuint depth, GSbool commit) override;
+
         GSbool xGSAPI Compute(IxGSComputeState state, GSuint x, GSuint y, GSuint z) override;
 
         GSbool xGSAPI BeginTimerQuery() override;
         GSbool xGSAPI EndTimerQuery() override;
         GSbool xGSAPI TimstampQuery() override;
-        GSbool xGSAPI GatherTimers(GSuint64 *values, GSuint count) override;
+        GSbool xGSAPI GatherTimers(GSuint flags, GSuint64 *values, GSuint count) override;
 
     public:
         template <typename T> void AddObject(T *object);
@@ -266,9 +270,9 @@ namespace xGS
 
         xGSGeometryBufferImpl *p_immediatebuffer;
 
-        // WIP
         GLuint                 p_timerqueries[1024];
         GSuint                 p_timerindex;
+        GSuint                 p_opentimerqueries;
         GSuint                 p_timerscount;
 
 #ifdef _DEBUG
