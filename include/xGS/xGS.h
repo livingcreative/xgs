@@ -1,9 +1,9 @@
-/*
+﻿/*
         xGS 3D Low-level rendering API
 
     Low-level 3D rendering wrapper API with multiple back-end support
 
-    (c) livingcreative, 2015
+    (c) livingcreative, 2015 - 2016
 
     https://github.com/livingcreative/xgs
 
@@ -588,8 +588,8 @@ typedef InterfacePtr<IxGSParameters>     IxGSParametersRef;
 
 // Renderer description structure
 //      GS_DEFAULT value for modeindex will left video mode unchanged
-//      GS_DEFAULT value for format and multisample will choose best available values for
-//      default render target. If some of buffer's surfaces not needed - format value should
+//      GS_DEFAULT value for bits and multisample will choose best available values for
+//      default render target. If some of buffer's surfaces not needed - bits value should
 //      be set to GS_NONE
 struct GSrendererdescription
 {
@@ -877,18 +877,21 @@ struct GSblendsate
 
 struct GSrasterizerstate
 {
-    GSenum fill;
-    GSenum cull;
-    GSbool multisample;
-    GSbool sampleshading;
-    GSuint polygonoffset;
-    GSbool discard;
+    GSenum  fill;
+    GSenum  cull;
+    GSfloat pointsize;
+    GSbool  programpointsize;
+    GSbool  multisample;
+    GSbool  sampleshading;
+    GSuint  polygonoffset;
+    GSbool  discard;
 
     static GSrasterizerstate construct()
     {
         GSrasterizerstate result = {
             GS_FILL_POLYGON,
-            GS_CULL_CCW
+            GS_CULL_CCW,
+            1.0f
         };
         return result;
     }
@@ -946,7 +949,7 @@ struct GSoutputlayout
             GSinputlayout structs. Each stream can be per-vertex or per-instance, this is
             indicated by divisor field of GSinputlayout.
 
-            Streams are linked to buffers in order. State can has multiple sets of buffers and
+            Streams linked to buffers in order. State can has multiple sets of buffers and
             only one active set during draw call. Active buffers set can be changed with
             renderer command.
 
@@ -1176,7 +1179,7 @@ public:
  -------------------------------------------------------------------------------
     DataBuffer xGS object interface
 
-    This object holds uniform data for shader programs.
+    This object holds parameters data for shader programs.
 
     Following specific values defined for this object type (can be queried with GetValue):
         TODO
@@ -1332,7 +1335,10 @@ class xGSParameters : public IUnknownStub
 
 
 class xGSRenderList : public IUnknownStub
-{};
+{
+public:
+
+};
 
 
 class xGSSystem : public IUnknownStub
@@ -1346,20 +1352,19 @@ public:
     virtual GSbool xGSAPI CreateObject(GSenum type, const void *desc, void **result) = 0;
     virtual GSbool xGSAPI CreateSamplers(const GSsamplerdescription *samplers, GSuint count) = 0;
 
-    // QUERY API
+    // query API
     virtual GSbool xGSAPI GetRenderTargetSize(GSsize &size) = 0;
 
-    // RENDERING
+    // rendering
     virtual GSbool xGSAPI Clear(GSbool color, GSbool depth, GSbool stencil, const GScolor &colorvalue, float depthvalue, GSdword stencilvalue) = 0;
     virtual GSbool xGSAPI Display() = 0;
 
     virtual GSbool xGSAPI SetRenderTarget(IxGSFrameBuffer rendertarget) = 0;
-
+    virtual GSbool xGSAPI SetViewport(const GSrect &viewport) = 0;
     virtual GSbool xGSAPI SetState(IxGSState state) = 0;
     virtual GSbool xGSAPI SetInput(IxGSInput input) = 0;
     virtual GSbool xGSAPI SetParameters(IxGSParameters parameters) = 0;
 
-    virtual GSbool xGSAPI SetViewport(const GSrect &viewport) = 0;
     virtual GSbool xGSAPI SetStencilReference(GSuint ref) = 0;
     virtual GSbool xGSAPI SetBlendColor(const GScolor &color) = 0;
     virtual GSbool xGSAPI SetUniformValue(GSenum set, GSenum slot, GSenum type, const void *value) = 0;
@@ -1385,6 +1390,11 @@ public:
     ) = 0;
     virtual GSbool xGSAPI CopyData(xGSObject *src, xGSObject *dst, GSuint readoffset, GSuint writeoffset, GSuint size, GSuint flags) = 0;
 
+    // sparse API wip
+    virtual GSbool xGSAPI BufferCommitment(xGSObject *buffer, GSuint offset, GSuint size, GSbool commit, GSuint flags) = 0;
+    virtual GSbool xGSAPI GeometryBufferCommitment(IxGSGeometryBuffer buffer, IxGSGeometry *geometries, GSuint count, GSbool commit) = 0;
+    virtual GSbool xGSAPI TextureCommitment(IxGSTexture texture, GSuint level, GSuint x, GSuint y, GSuint z, GSuint width, GSuint height, GSuint depth, GSbool commit) = 0;
+
     // compute API wip
     virtual GSbool xGSAPI Compute(IxGSComputeState state, GSuint x, GSuint y, GSuint z) = 0;
 
@@ -1392,7 +1402,7 @@ public:
     virtual GSbool xGSAPI BeginTimerQuery() = 0;
     virtual GSbool xGSAPI EndTimerQuery() = 0;
     virtual GSbool xGSAPI TimstampQuery() = 0;
-    virtual GSbool xGSAPI GatherTimers(GSuint64 *values, GSuint count) = 0;
+    virtual GSbool xGSAPI GatherTimers(GSuint flags, GSuint64 *values, GSuint count) = 0;
 };
 
 
