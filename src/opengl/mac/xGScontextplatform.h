@@ -1,13 +1,13 @@
-/*
+﻿/*
         xGS 3D Low-level rendering API
 
     Low-level 3D rendering wrapper API with multiple back-end support
 
-    (c) livingcreative, 2015
+    (c) livingcreative, 2015 - 2016
 
     https://github.com/livingcreative/xgs
 
-    mac/xGScontextplatform.h
+    opengl/mac/xGScontextplatform.h
         xGScontextOSX class - Mac OS X OpenGL context implementation
 */
 
@@ -16,9 +16,7 @@
 #include "../xGScontext.h"
 #include "contextwrapper.h"
 
-
-namespace xGS
-{
+namespace xGS {
 
     class xGScontextOSX : public xGScontext
     {
@@ -64,5 +62,5 @@ namespace xGS
             return new xGScontextOSX();
         }
     };
-
+    
 } // namespace xGS

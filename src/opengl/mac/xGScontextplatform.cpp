@@ -1,13 +1,13 @@
-/*
+﻿/*
         xGS 3D Low-level rendering API
 
     Low-level 3D rendering wrapper API with multiple back-end support
 
-    (c) livingcreative, 2015
+    (c) livingcreative, 2015 - 2016
 
     https://github.com/livingcreative/xgs
 
-    mac/xGScontextplatform.cpp
+    opengl/mac/xGScontextplatform.cpp
         xGScontextOSX class implementation
 */
 
@@ -30,8 +30,6 @@ GSerror xGScontextOSX::Initialize()
 
 GSerror xGScontextOSX::CreateRenderer(const GSrendererdescription &desc)
 {
-    // TODO: implement pixel format
-
     p_context = cw_create(reinterpret_cast<NSWidget*>(desc.widget));
 
     p_rtformat.pfColorBits = 32;
