@@ -137,7 +137,7 @@ gdesc.type = GS_PRIM_TRIANGLES;    // render triangles
 gdesc.indexformat = GS_INDEX_NONE; // no indexing
 gdesc.vertexcount = 3;             // 3 vertices
 gdesc.indexcount = 0;              // no indices
-gdesc.buffer = buffer;             // buffer in whicvh geometry will be allocated
+gdesc.buffer = buffer;             // buffer in which geometry will be allocated
 
 // create geometry object
 IxGSGeometry geometry = nullptr;
