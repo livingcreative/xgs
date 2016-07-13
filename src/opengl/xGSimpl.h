@@ -16,6 +16,7 @@
 
 #include "xGS/xGS.h"
 #include "xGSutil.h"
+#include "xGSGLutil.h"
 #include "IUnknownImpl.h"
 #include <memory>
 #include <vector>

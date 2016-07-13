@@ -63,36 +63,6 @@ namespace xGS
     };
 
 
-    struct GScaps
-    {
-        GLint  max_active_attribs;
-        GLint  max_texture_units;
-        GLint  max_ubo_size;
-        GLint  ubo_alignment;
-        GSbool multi_bind;
-        GSbool multi_blend;
-        GSbool vertex_format;
-        GSbool texture_srgb;
-        GSbool texture_float;
-        GSbool texture_depth;
-        GSbool texture_depthstencil;
-        GLint  max_draw_buffers;
-        GLint  max_texture_size;
-        GLint  max_3d_texture_size;
-        GLint  max_array_texture_layers;
-        GLint  max_cube_map_texture_size;
-        GLint  max_rectangle_texture_size;
-        GLint  max_texture_buffer_size;
-        GSbool copy_image;
-        GSbool sparse_texture;
-        GLint  max_sparse_texture_size;
-        GLint  max_sparse_3dtexture_size;
-        GLint  max_sparse_texture_layers;
-        GSbool sparse_buffer;
-        GLint  sparse_buffer_pagesize;
-    };
-
-
     inline GSptr ptr_offset(GSptr ptr, GSint offset)
     {
         return reinterpret_cast<char*>(ptr) + offset;
