@@ -8,7 +8,7 @@ and has native implementation for supported platforms (currently OpenGL 4+ imple
 It's suitable for rendering modern 3D graphics. It can be used as a low-level layer for 3D
 visualization and interactive game rendering.   
 
-Please note that `xgs` is not a full graphics or game engine - it's only a thin layer which simplifies
+Please note that xgs is not a full graphics or game engine - it's only a thin layer which simplifies
 interaction with 3D hardware, it does not provide any pre-made rendering techniques, shaders or
 other data. However, most of modern rendering techniques are easier to implement with xgs.
 
@@ -18,6 +18,9 @@ other data. However, most of modern rendering techniques are easier to implement
 ## What it does
 xgs API provides an easy way to set-up your 3D rendering pipeline and render modern 3D graphics. 
 However, mastering of your 3D content, shaders and rendering techniques is up to you.
+
+Screenshot of xgs demo application (eventually more pleasant demo will be released with more implemented features):   
+![xgs demo image](https://raw.githubusercontent.com/livingcreative/xgs/master/demo.jpg)
 
 **Features**
 * GCN friendly abstraction
