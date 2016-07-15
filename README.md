@@ -215,6 +215,9 @@ gs->SetState(state);
 
 // render triangle geometry
 gs->DrawGeometry(geometry);
+
+// display result
+gs->Display();
 ```
 
 To proper shutdown xgs you need to clean-up all objects, destroy renderer and release xgs
