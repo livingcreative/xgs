@@ -22,6 +22,7 @@
 #include "xGSparameters.cpp"
 #include "xGSstate.cpp"
 #include "xGSinput.cpp"
+#include "xGSimplBase.cpp"
 #include "xGSimpl.cpp"
 #include "xGSgeometrybuffer.cpp"
 #include "xGSgeometry.cpp"

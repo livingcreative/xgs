@@ -20,17 +20,10 @@
 #include "xGSstate.h"
 #include "xGSinput.h"
 #include "xGSparameters.h"
-#include <cstdlib>
 
 #ifdef _DEBUG
-    #include <cstdarg>
-
     #ifdef WIN32
         #include <Windows.h>
-    #endif
-
-    #ifdef __APPLE__
-        #define CALLBACK
     #endif
 #endif
 
@@ -39,35 +32,11 @@ using namespace xGS;
 
 
 xGSImpl::xGSImpl() :
-    p_systemstate(SYSTEM_NOTREADY),
-
-    p_geometrylist(),
-    p_geometrybufferlist(),
-    p_databufferlist(),
-    p_texturelist(),
-    p_samplerlist(),
-    p_framebufferlist(),
-    p_statelist(),
-    p_inputlist(),
-    p_parameterslist(),
-
-    p_rendertarget(nullptr),
-    p_state(nullptr),
-    p_input(nullptr),
-    p_capturebuffer(nullptr),
-    p_immediatebuffer(nullptr)
+    xGSImplBase()
 {
-    for (size_t n = 0; n < GS_MAX_PARAMETER_SETS; ++n) {
-        p_parameters[n] = nullptr;
-    }
-
     // TODO: xGSImpl::xGSImpl DX11
 
     p_systemstate = SYSTEM_READY;
-
-#ifdef _DEBUG
-    dbg_memory_allocs = 0;
-#endif
 }
 
 xGSImpl::~xGSImpl()
@@ -78,90 +47,6 @@ xGSImpl::~xGSImpl()
     if (p_systemstate == RENDERER_READY) {
         DestroyRenderer(true);
     }
-    gs = nullptr;
-}
-
-
-GSptr xGSImpl::allocate(GSint size)
-{
-#if defined(_DEBUG) && defined(WIN32)
-    dbg_memory_allocs += size;
-#endif
-    return malloc(size_t(size));
-}
-
-void xGSImpl::free(GSptr &memory)
-{
-#if defined(_DEBUG) && defined(WIN32)
-    dbg_memory_allocs -= GSint(_msize(memory));
-#endif
-    ::free(memory);
-    memory = nullptr;
-}
-
-GSbool xGSImpl::error(GSerror code, DebugMessageLevel level)
-{
-    p_error = code;
-    if (p_error != GS_OK) {
-        debug(level, "Code: 0x%X\n", code);
-
-#ifdef _MSC_VER
-        //_CrtDbgBreak();
-#endif
-    }
-
-    return code == GS_OK;
-}
-
-#ifdef _DEBUG
-    #ifdef WIN32
-        #define DEBUG_PRINT(T) OutputDebugStringA(T)
-    #endif
-
-    #ifdef __APPLE__
-        #define DEBUG_PRINT(T) printf(T)
-    #endif
-#endif
-
-void xGSImpl::debug(DebugMessageLevel level, const char *format, ...)
-{
-#ifdef _DEBUG
-    va_list args;
-    va_start(args, format);
-
-    if (*format && (*format != '\n')) {
-        switch (level) {
-            case DebugMessageLevel::Information:
-                DEBUG_PRINT("xGS INFO: ");
-                break;
-
-            case DebugMessageLevel::Warning:
-                DEBUG_PRINT("xGS WARNING: ");
-                break;
-
-            case DebugMessageLevel::Error:
-                DEBUG_PRINT("xGS ERROR: ");
-                break;
-
-            case DebugMessageLevel::SystemError:
-                DEBUG_PRINT("xGS SYSTEM ERROR: ");
-                break;
-        }
-    }
-
-#ifdef WIN32
-    char buf[4096];
-    vsprintf_s(buf, format, args);
-
-    OutputDebugStringA(buf);
-#endif
-
-#ifdef __APPLE__
-    vprintf(format, args);
-#endif
-
-    va_end(args);
-#endif
 }
 
 #ifdef _DEBUG
@@ -205,21 +90,7 @@ GSbool xGSImpl::DestroyRenderer(GSbool restorevideomode)
         return GS_FALSE;
     }
 
-    ::Release(p_state);
-    ::Release(p_input);
-    for (size_t n = 0; n < GS_MAX_PARAMETER_SETS; ++n) {
-        ::Release(p_parameters[n]);
-    }
-    ::Release(p_rendertarget);
-
-    ReleaseObjectList(p_statelist, "State");
-    ReleaseObjectList(p_inputlist, "Input");
-    ReleaseObjectList(p_parameterslist, "Parameters");
-    ReleaseObjectList(p_geometrylist, "Geomtery");
-    ReleaseObjectList(p_framebufferlist, "Framebuffer");
-    ReleaseObjectList(p_geometrybufferlist, "GeomteryBuffer");
-    ReleaseObjectList(p_databufferlist, "DataBuffer");
-    ReleaseObjectList(p_texturelist, "Texture");
+    CleanupObjects();
 
     // TODO: xGSImpl::DestroyRenderer
 
@@ -344,7 +215,7 @@ GSbool xGSImpl::SetRenderTarget(IxGSFrameBuffer rendertarget)
     // TODO: srgb enable
 
     // reset current state, after RT change any state should be rebound
-    SetState(static_cast<xGSStateImpl*>(nullptr));
+    xGSImplBase::SetState(p_caps, static_cast<xGSStateImpl*>(nullptr));
 
     return error(GS_OK);
 }
@@ -385,7 +256,7 @@ GSbool xGSImpl::SetState(IxGSState state)
         return error(GSE_INVALIDOBJECT);
     }
 
-    SetState(stateimpl);
+    xGSImplBase::SetState(p_caps, stateimpl);
 
     return error(GS_OK);
 }
@@ -405,7 +276,7 @@ GSbool xGSImpl::SetInput(IxGSInput input)
         return error(GSE_INVALIDOPERATION);
     }
 
-    AttachObject(p_input, inputimpl);
+    AttachObject(p_caps, p_input, inputimpl);
 
     return error(GS_OK);
 }
@@ -433,7 +304,7 @@ GSbool xGSImpl::SetParameters(IxGSParameters parameters)
         return error(GSE_INVALIDSTATE);
     }
 
-    AttachObject(p_parameters[parametersimpl->setindex()], parametersimpl);
+    AttachObject(p_caps, p_parameters[parametersimpl->setindex()], parametersimpl);
 
     return error(GS_OK);
 }
@@ -540,12 +411,12 @@ GSbool xGSImpl::SetUniformValue(GSenum set, GSenum slot, GSenum type, const void
 
 struct SimpleDrawer
 {
-    void DrawArrays() const
+    void DrawArrays(GSenum mode, GSuint first, GSuint count) const
     {
         // TODO
     }
 
-    void DrawElementsBaseVertex() const
+    void DrawElementsBaseVertex(GSenum mode, GSuint count, GSenum type, const void *indices, GSuint basevertex) const
     {
         // TODO
     }
@@ -557,12 +428,12 @@ struct InstancedDrawer
         p_count(count)
     {}
 
-    void DrawArrays() const
+    void DrawArrays(GSenum mode, GSuint first, GSuint count) const
     {
         // TODO
     }
 
-    void DrawElementsBaseVertex() const
+    void DrawElementsBaseVertex(GSenum mode, GSuint count, GSenum type, const void *indices, GSuint basevertex) const
     {
         // TODO
     }
@@ -573,12 +444,12 @@ private:
 
 struct SimpleMultiDrawer
 {
-    void MultiDrawArrays() const
+    void MultiDrawArrays(GSenum mode, int *first, int *count, GSuint drawcount) const
     {
         // TODO
     }
 
-    void MultiDrawElementsBaseVertex() const
+    void MultiDrawElementsBaseVertex(GSenum mode, int *count, GSenum type, void **indices, GSuint primcount, int *basevertex) const
     {
         // TODO
     }
@@ -590,12 +461,12 @@ struct InstancedMultiDrawer
         p_count(count)
     {}
 
-    void MultiDrawArrays() const
+    void MultiDrawArrays(GSenum mode, int *first, int *count, GSuint drawcount) const
     {
         // TODO
     }
 
-    void MultiDrawElementsBaseVertex() const
+    void MultiDrawElementsBaseVertex(GSenum mode, int *count, GSenum type, void **indices, GSuint primcount, int *basevertex) const
     {
         // TODO
     }
@@ -916,31 +787,6 @@ GSbool xGSImpl::GatherTimers(GSuint flags, GSuint64 *values, GSuint count)
 }
 
 
-#define GS_ADD_REMOVE_OBJECT_IMPL(list, type)\
-template <> void xGSImpl::AddObject(type *object)\
-{\
-    list.insert(object);\
-}\
-\
-template <> void xGSImpl::RemoveObject(type *object)\
-{\
-    list.erase(object);\
-}
-
-GS_ADD_REMOVE_OBJECT_IMPL(p_geometrylist, xGSGeometryImpl)
-GS_ADD_REMOVE_OBJECT_IMPL(p_geometrybufferlist, xGSGeometryBufferImpl)
-GS_ADD_REMOVE_OBJECT_IMPL(p_databufferlist, xGSDataBufferImpl)
-GS_ADD_REMOVE_OBJECT_IMPL(p_texturelist, xGSTextureImpl)
-GS_ADD_REMOVE_OBJECT_IMPL(p_framebufferlist, xGSFrameBufferImpl)
-GS_ADD_REMOVE_OBJECT_IMPL(p_statelist, xGSStateImpl)
-GS_ADD_REMOVE_OBJECT_IMPL(p_inputlist, xGSInputImpl)
-GS_ADD_REMOVE_OBJECT_IMPL(p_parameterslist, xGSParametersImpl)
-
-#undef GS_ADD_REMOVE_OBJECT_IMPL
-
-
-IxGS xGSImpl::gs = nullptr;
-
 IxGS xGSImpl::create()
 {
     if (!gs) {
@@ -970,32 +816,6 @@ GSbool xGSImpl::GetTextureFormatDescriptor(GSvalue format, TextureFormatDescript
 //}
 
 
-GSbool xGSImpl::ValidateState(SystemState requiredstate, bool exactmatch, bool matchimmediate, bool requiredimmediate)
-{
-    if (p_systemstate == SYSTEM_NOTREADY) {
-        return error(GSE_SYSTEMNOTREADY);
-    }
-
-    if (p_systemstate == SYSTEM_READY && requiredstate > p_systemstate) {
-        return error(GSE_RENDERERNOTREADY);
-    }
-
-    if (p_systemstate == RENDERER_READY && requiredstate > p_systemstate) {
-        return error(GSE_INVALIDOPERATION);
-    }
-
-    if (exactmatch && p_systemstate != requiredstate) {
-        return error(GSE_INVALIDOPERATION);
-    }
-
-    bool immediatemode = p_immediatebuffer != nullptr;
-    if (matchimmediate && requiredimmediate != immediatemode) {
-        return error(GSE_INVALIDOPERATION);
-    }
-
-    return GS_TRUE;
-}
-
 void xGSImpl::AddTextureFormatDescriptor(GSvalue format)
 {
     // TODO: xGSImpl::AddTextureFormatDescriptor
@@ -1024,127 +844,6 @@ void xGSImpl::DefaultRTFormats()
 
     //p_colorformats[0] = ColorFormatFromPixelFormat(fmt);
     //p_depthstencilformat = DepthFormatFromPixelFormat(fmt);
-}
-
-void xGSImpl::SetState(xGSStateImpl *state)
-{
-    AttachObject(p_state, state);
-    AttachObject(p_input, static_cast<xGSInputImpl*>(nullptr));
-    for (size_t n = 0; n < GS_MAX_PARAMETER_SETS; ++n) {
-        AttachObject(p_parameters[n], static_cast<xGSParametersImpl*>(nullptr));
-    }
-#ifdef _DEBUG
-    if (!p_state) {
-        xGSStateImpl::bindNullProgram();
-    }
-#endif
-}
-
-template <typename T>
-GSbool xGSImpl::Draw(IxGSGeometry geometry_to_draw, const T &drawer)
-{
-    if (!ValidateState(RENDERER_READY, false, true, false)) {
-        return GS_FALSE;
-    }
-
-    if (!geometry_to_draw) {
-        return error(GSE_INVALIDOBJECT);
-    }
-
-    if (!p_state) {
-        return error(GSE_INVALIDSTATE);
-    }
-
-    xGSGeometryImpl *geometry = static_cast<xGSGeometryImpl*>(geometry_to_draw);
-    if (!geometry->allocated()) {
-        return error(GSE_INVALIDOBJECT);
-    }
-
-    xGSGeometryBufferImpl *buffer = geometry->buffer();
-
-#ifdef _DEBUG
-    size_t primaryslot = p_state->inputPrimarySlot();
-    xGSGeometryBufferImpl *boundbuffer =
-        primaryslot == GS_UNDEFINED ? nullptr : p_state->input(primaryslot).buffer;
-    if (p_input && boundbuffer == nullptr)  {
-        boundbuffer = p_input->primaryBuffer();
-    }
-    if (buffer != boundbuffer) {
-        return error(GSE_INVALIDOBJECT);
-    }
-#endif
-
-    geometry->setup();
-
-    if (geometry->indexFormat() == GS_INDEX_NONE) {
-        // TODO
-    } else {
-        // TODO
-    }
-
-    return error(GS_OK);
-}
-
-template <typename T>
-GSbool xGSImpl::MultiDraw(IxGSGeometry *geometries_to_draw, GSuint count, const T &drawer)
-{
-    if (!ValidateState(RENDERER_READY, false, true, false)) {
-        return GS_FALSE;
-    }
-
-    if (!geometries_to_draw) {
-        return error(GSE_INVALIDVALUE);
-    }
-
-    if (!p_state) {
-        return error(GSE_INVALIDSTATE);
-    }
-
-#ifdef _DEBUG
-    size_t primaryslot = p_state->inputPrimarySlot();
-    xGSGeometryBufferImpl *boundbuffer =
-        primaryslot == GS_UNDEFINED ? nullptr : p_state->input(primaryslot).buffer;
-    if (p_input && boundbuffer == nullptr)  {
-        boundbuffer = p_input->primaryBuffer();
-    }
-#endif
-
-    GSenum primtype = GS_NONE;
-    GSenum indextype = GS_NONE;
-    int first[4096];
-    int counts[4096];
-    GSptr indices[4096];
-    size_t current = 0;
-
-    for (GSuint n = 0; n < count; ++n) {
-        xGSGeometryImpl *geometry = static_cast<xGSGeometryImpl*>(geometries_to_draw[n]);
-        if (!geometry->allocated()) {
-            return error(GSE_INVALIDOBJECT);
-        }
-
-#ifdef _DEBUG
-        xGSGeometryBufferImpl *buffer = geometry->buffer();
-        if (buffer != boundbuffer) {
-            return error(GSE_INVALIDOBJECT);
-        }
-#endif
-
-        first[current] = geometry->baseVertex();
-        counts[current] = geometry->vertexCount(); // TODO: index count for indexed
-        indices[current] = geometry->indexPtr(); // TODO: only for indexed
-        ++current;
-
-        // TODO: geometry setup, geometry type, index type
-        //geometry->setup();
-    }
-
-    if (indextype == GS_INDEX_NONE) {
-        // TODO
-    } else {
-        // TODO
-    }
-
-    return error(GS_OK);
 }
 
 void xGSImpl::DrawImmediatePrimitives(xGSGeometryBufferImpl *buffer)

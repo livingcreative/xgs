@@ -15,30 +15,17 @@
 #pragma once
 
 #include "xGS/xGS.h"
-#include "xGSutil.h"
+#include "xGSimplBase.h"
 #include "xGSDX11util.h"
-#include "IUnknownImpl.h"
 #include <memory>
 #include <vector>
-#include <string>
-#include <unordered_set>
 #include <unordered_map>
 
 
 namespace xGS
 {
 
-    class xGSGeometryImpl;
-    class xGSGeometryBufferImpl;
-    class xGSDataBufferImpl;
-    class xGSTextureImpl;
-    class xGSFrameBufferImpl;
-    class xGSStateImpl;
-    class xGSInputImpl;
-    class xGSParametersImpl;
-
-
-    class xGSImpl : public xGSIUnknownImpl<xGSSystem>
+    class xGSImpl : public xGSImplBase
     {
     public:
         xGSImpl();
@@ -54,15 +41,6 @@ namespace xGS
         void referenceSampler(GSuint index) { ++p_samplerlist[index].refcount; }
         void dereferenceSampler(GSuint index) { --p_samplerlist[index].refcount; }
 
-        // memory management
-        GSptr allocate(GSint size);
-        void free(GSptr &memory);
-
-        // error set-up
-        GSbool error(GSerror code, DebugMessageLevel level = DebugMessageLevel::Error);
-
-        // debug logging
-        void debug(DebugMessageLevel level, const char *format, ...);
 #ifdef _DEBUG
         void debugTrackDXError(const char *text);
 #endif
@@ -123,9 +101,6 @@ namespace xGS
         GSbool xGSAPI GatherTimers(GSuint flags, GSuint64 *values, GSuint count) override;
 
     public:
-        template <typename T> void AddObject(T *object);
-        template <typename T> void RemoveObject(T *object);
-
         static IxGS create();
 
         struct TextureFormatDescriptor
@@ -145,65 +120,10 @@ namespace xGS
         //const GSpixelformat& DefaultRenderTargetFormat();
 
     private:
-        enum SystemState
-        {
-            SYSTEM_NOTREADY,
-            SYSTEM_READY,
-            RENDERER_READY,
-            CAPTURE
-        };
-
-        GSbool ValidateState(SystemState requiredstate, bool exactmatch, bool matchimmediate, bool requiredimmediate);
-
         void AddTextureFormatDescriptor(GSvalue format);
         void RenderTargetSize(GSsize &size);
 
-        template <typename T>
-        void CheckObjectList(const T &list, const std::string &listname)
-        {
-#ifdef _DEBUG
-            if (list.size()) {
-                debug(DebugMessageLevel::Warning, "Not all resources released in list %s ar renderer destroy", listname.c_str());
-#ifdef _MSC_VER
-                _CrtDbgBreak();
-#endif
-            }
-#endif
-        }
-
-        template <typename T>
-        void ReleaseObjectList(T &list, const std::string &listname)
-        {
-            CheckObjectList(list, listname);
-            for (auto &object : list) {
-                object->ReleaseRendererResources();
-                object->DetachFromRenderer();
-            }
-        }
-
-        template <typename T>
-        void AttachObject(T &attachpoint, T object)
-        {
-            if (attachpoint) {
-                attachpoint->Release();
-            }
-
-            attachpoint = object;
-
-            if (attachpoint) {
-                attachpoint->AddRef();
-                attachpoint->apply(p_caps);
-            }
-        }
-
         void DefaultRTFormats();
-
-        void SetState(xGSStateImpl *state);
-
-        template <typename T>
-        GSbool Draw(IxGSGeometry geometry_to_draw, const T &drawer);
-        template <typename T>
-        GSbool MultiDraw(IxGSGeometry *geometries_to_draw, GSuint count, const T &drawer);
 
         void DrawImmediatePrimitives(xGSGeometryBufferImpl *buffer);
 
@@ -214,55 +134,18 @@ namespace xGS
         };
 
         typedef std::vector<Sampler>                                 SamplerList;
-        typedef std::unordered_set<xGSGeometryImpl*>                 GeometryList;
-        typedef std::unordered_set<xGSGeometryBufferImpl*>           GeometryBufferList;
-        typedef std::unordered_set<xGSDataBufferImpl*>               DataBufferList;
-        typedef std::unordered_set<xGSTextureImpl*>                  TextureList;
-        typedef std::unordered_set<xGSFrameBufferImpl*>              FrameBufferList;
-        typedef std::unordered_set<xGSStateImpl*>                    StateList;
-        typedef std::unordered_set<xGSInputImpl*>                    InputList;
-        typedef std::unordered_set<xGSParametersImpl*>               ParametersList;
         typedef std::unordered_map<GSvalue, TextureFormatDescriptor> TextureDescriptorsMap;
 
     private:
-        static IxGS            gs;
-
-        GSerror                p_error;
-        SystemState            p_systemstate;
-
         SamplerList            p_samplerlist;
-        GeometryList           p_geometrylist;
-        GeometryBufferList     p_geometrybufferlist;
-        DataBufferList         p_databufferlist;
-        TextureList            p_texturelist;
-        FrameBufferList        p_framebufferlist;
-        StateList              p_statelist;
-        InputList              p_inputlist;
-        ParametersList         p_parameterslist;
 
         GScaps                 p_caps;
         TextureDescriptorsMap  p_texturedescs;
-
-        xGSFrameBufferImpl    *p_rendertarget;
-        GSenum                 p_colorformats[GS_MAX_FB_COLORTARGETS];
-        GSenum                 p_depthstencilformat;
-
-        xGSStateImpl          *p_state;
-        xGSInputImpl          *p_input;
-        xGSParametersImpl     *p_parameters[GS_MAX_PARAMETER_SETS];
-
-        xGSGeometryBufferImpl *p_capturebuffer;
-
-        xGSGeometryBufferImpl *p_immediatebuffer;
 
         int                    p_timerqueries[1024];
         GSuint                 p_timerindex;
         GSuint                 p_opentimerqueries;
         GSuint                 p_timerscount;
-
-#ifdef _DEBUG
-        GSint                  dbg_memory_allocs;
-#endif
     };
 
 } // namespace xGS
