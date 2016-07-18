@@ -23,7 +23,6 @@ using namespace std;
 
 xGSStateImpl::xGSStateImpl(xGSImpl *owner) :
     xGSObjectImpl(owner),
-    p_allocated(false),
     p_primaryslot(GS_UNDEFINED)
 {
     p_owner->debug(DebugMessageLevel::Information, "State object created\n");
@@ -275,8 +274,6 @@ GSbool xGSStateImpl::allocate(const GSstatedescription &desc)
     p_polygonoffset = desc.rasterizer.polygonoffset;
     p_multisample = desc.rasterizer.multisample;
 
-    p_allocated = true;
-
     return p_owner->error(GS_OK);
  }
 
@@ -329,8 +326,6 @@ void xGSStateImpl::ReleaseRendererResources()
     p_input.clear();
 
     p_staticstate.ReleaseRendererResources(p_owner);
-
-    p_allocated = false;
 }
 
 GSbool xGSStateImpl::uniformIsSampler(int type) const

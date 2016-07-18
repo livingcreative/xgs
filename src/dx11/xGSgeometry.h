@@ -42,7 +42,6 @@ namespace xGS
     public:
         GSbool allocate(const GSgeometrydescription &desc);
 
-        GSbool                 allocated() const { return p_allocated; }
         GSenum                 type() const { return p_type; }
         GSenum                 indexFormat() const { return p_indexformat; }
         GSint                  vertexCount() const { return p_vertexcount; }
@@ -67,8 +66,6 @@ namespace xGS
         void doUnlock();
 
     private:
-        GSbool                 p_allocated;    // is object allocated?
-
         GSenum                 p_type;         // primitive type
         GSenum                 p_indexformat;  // index format
         GSint                  p_vertexcount;

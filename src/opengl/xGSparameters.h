@@ -44,12 +44,10 @@ namespace xGS
 
         xGSStateImpl* state() const { return p_state; }
         GSuint setindex() const { return p_setindex; }
-        GSbool allocated() const { return p_allocated; }
 
         void ReleaseRendererResources();
 
     private:
-        GSbool        p_allocated;
         xGSStateImpl *p_state;
         GSuint        p_setindex;
     };

@@ -22,7 +22,6 @@ using namespace xGS;
 
 xGSInputImpl::xGSInputImpl(xGSImpl *owner) :
     xGSObjectImpl(owner),
-    p_allocated(false),
     p_state(nullptr),
     p_primarybuffer(nullptr),
     p_buffers(),
@@ -46,8 +45,7 @@ GSbool xGSInputImpl::allocate(const GSinputdescription &desc)
     }
 
     xGSStateImpl *state = static_cast<xGSStateImpl*>(desc.state);
-
-    if (!state || !state->allocated()) {
+    if (!state) {
         return p_owner->error(GSE_INVALIDOBJECT);
     }
 
@@ -70,9 +68,6 @@ GSbool xGSInputImpl::allocate(const GSinputdescription &desc)
         }
 
         xGSGeometryBufferImpl *buffer = static_cast<xGSGeometryBufferImpl*>(binding->buffer);
-        if (!buffer->allocated()) {
-            return p_owner->error(GSE_INVALIDOBJECT);
-        }
 
         // TODO: check layout match
 
@@ -132,8 +127,6 @@ GSbool xGSInputImpl::allocate(const GSinputdescription &desc)
         glBindVertexArray(0);
 #endif
     }
-
-    p_allocated = true;
 
     return p_owner->error(GS_OK);
 }

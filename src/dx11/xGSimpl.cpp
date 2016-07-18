@@ -248,10 +248,6 @@ GSbool xGSImpl::SetState(IxGSState state)
 
     xGSStateImpl *stateimpl = static_cast<xGSStateImpl*>(state);
 
-    if (!stateimpl->allocated()) {
-        return error(GSE_INVALIDOBJECT);
-    }
-
     if (!stateimpl->validate(p_colorformats, p_depthstencilformat)) {
         return error(GSE_INVALIDOBJECT);
     }
@@ -268,7 +264,7 @@ GSbool xGSImpl::SetInput(IxGSInput input)
     }
 
     xGSInputImpl *inputimpl = static_cast<xGSInputImpl*>(input);
-    if (inputimpl == nullptr || !inputimpl->allocated()) {
+    if (inputimpl == nullptr) {
         return error(GSE_INVALIDOBJECT);
     }
 
@@ -295,10 +291,6 @@ GSbool xGSImpl::SetParameters(IxGSParameters parameters)
     }
 
     xGSParametersImpl *parametersimpl = static_cast<xGSParametersImpl*>(parameters);
-
-    if (!parametersimpl->allocated()) {
-        return error(GSE_INVALIDOBJECT);
-    }
 
     if (p_state == nullptr || parametersimpl->state() != p_state) {
         return error(GSE_INVALIDSTATE);

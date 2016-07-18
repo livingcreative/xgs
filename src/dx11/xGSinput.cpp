@@ -22,7 +22,6 @@ using namespace xGS;
 
 xGSInputImpl::xGSInputImpl(xGSImpl *owner) :
     xGSObjectImpl(owner),
-    p_allocated(false),
     p_state(nullptr),
     p_primarybuffer(nullptr),
     p_buffers()
@@ -44,7 +43,7 @@ GSbool xGSInputImpl::allocate(const GSinputdescription &desc)
 
     xGSStateImpl *state = static_cast<xGSStateImpl*>(desc.state);
 
-    if (!state || !state->allocated()) {
+    if (!state) {
         return p_owner->error(GSE_INVALIDOBJECT);
     }
 
@@ -88,8 +87,6 @@ GSbool xGSInputImpl::allocate(const GSinputdescription &desc)
     p_primarybuffer = p_buffers[p_state->inputPrimarySlot()];
 
     // TODO: xGSInputImpl::allocate
-
-    p_allocated = true;
 
     return p_owner->error(GS_OK);
 }

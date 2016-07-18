@@ -21,8 +21,6 @@ using namespace xGS;
 xGSGeometryImpl::xGSGeometryImpl(xGSImpl *owner) :
     xGSObjectImpl(owner),
 
-    p_allocated(false),
-
     p_type(GS_NONE),
     p_indexformat(GS_NONE),
     p_vertexcount(0),
@@ -99,7 +97,7 @@ GSbool xGSGeometryImpl::allocate(const GSgeometrydescription &desc)
         xGSGeometryBufferImpl *bufferimpl = static_cast<xGSGeometryBufferImpl*>(desc.buffer);
         GSenum indexformat = bufferimpl->indexFormat();
 
-        if (!bufferimpl->allocated() || bufferimpl->type() == GS_GBTYPE_IMMEDIATE) {
+        if (bufferimpl->type() == GS_GBTYPE_IMMEDIATE) {
             return p_owner->error(GSE_INVALIDOBJECT);
         }
 
@@ -175,8 +173,6 @@ GSbool xGSGeometryImpl::allocate(const GSgeometrydescription &desc)
         p_sharedgeometry = geometryimpl;
         p_sharedgeometry->AddRef();
     }
-
-    p_allocated = true;
 
     return p_owner->error(GS_OK);
 }

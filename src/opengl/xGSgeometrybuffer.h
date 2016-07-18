@@ -47,8 +47,6 @@ namespace xGS
     public:
         GSbool allocate(const GSgeometrybufferdescription &desc);
 
-        bool allocated() const { return p_vertexbuffer != 0; }
-
         GSenum type() const { return p_type; }
 
         GLuint getVertexBufferID() const { return p_vertexbuffer; }

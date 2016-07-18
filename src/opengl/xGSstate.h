@@ -62,8 +62,6 @@ namespace xGS
     public:
         GSbool allocate(const GSstatedescription &desc);
 
-        bool allocated() const { return p_allocated; }
-
         // TODO: move vertex array declarations from GSvertexdecl here
         GLint attribLocation(const char *name) const;
 
@@ -145,8 +143,6 @@ namespace xGS
     private:
         GLuint            p_program;
         GLuint            p_vao;
-
-        bool              p_allocated;
 
         AttributeList     p_attributes;
         UniformList       p_uniforms;

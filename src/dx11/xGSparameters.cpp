@@ -24,7 +24,6 @@ using namespace std;
 
 xGSParametersImpl::xGSParametersImpl(xGSImpl *owner) :
     xGSObjectImpl(owner),
-    p_allocated(false),
     p_state(nullptr),
     p_setindex(GS_UNDEFINED)
 {
@@ -40,7 +39,7 @@ xGSParametersImpl::~xGSParametersImpl()
 GSbool xGSParametersImpl::allocate(const GSparametersdescription &desc)
 {
     xGSStateImpl *state = static_cast<xGSStateImpl*>(desc.state);
-    if (!state || !state->allocated()) {
+    if (!state) {
         return p_owner->error(GSE_INVALIDOBJECT);
     }
 
@@ -63,8 +62,6 @@ GSbool xGSParametersImpl::allocate(const GSparametersdescription &desc)
         p_state->AddRef();
 
         p_setindex = setindex;
-
-        p_allocated = true;
     }
 
     return p_owner->error(result);

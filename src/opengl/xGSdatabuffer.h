@@ -53,7 +53,6 @@ namespace xGS
     public:
         GSbool allocate(const GSdatabufferdescription &desc);
 
-        bool allocated() const { return p_buffer != 0; }
         GLuint getID() const { return p_buffer; }
         GLenum target() const { return p_target; }
 

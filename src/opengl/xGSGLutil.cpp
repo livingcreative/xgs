@@ -110,9 +110,6 @@ GSerror GSParametersState::allocate(xGSImpl *impl, xGSStateImpl *state, const GS
 
             if (slot.location != GS_DEFAULT) {
                 xGSDataBufferImpl *buffer = static_cast<xGSDataBufferImpl*>(binding->buffer);
-                if (!buffer->allocated()) {
-                    return GSE_INVALIDOBJECT;
-                }
 
                 if (binding->block >= buffer->blockCount()) {
                     return GSE_INVALIDVALUE;

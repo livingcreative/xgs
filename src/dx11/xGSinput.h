@@ -43,8 +43,6 @@ namespace xGS
 
         xGSGeometryBufferImpl* primaryBuffer() const { return p_primarybuffer; }
 
-        GSbool allocated() const { return p_allocated; }
-
         void apply(const GScaps &caps);
 
         void ReleaseRendererResources();
@@ -53,7 +51,6 @@ namespace xGS
         typedef std::vector<xGSGeometryBufferImpl*> GeometryBufferList;
 
     private:
-        GSbool                 p_allocated;
         xGSStateImpl          *p_state;
         xGSGeometryBufferImpl *p_primarybuffer;
         GeometryBufferList     p_buffers;

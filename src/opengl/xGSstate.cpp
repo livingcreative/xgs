@@ -25,7 +25,6 @@ xGSStateImpl::xGSStateImpl(xGSImpl *owner) :
     xGSObjectImpl(owner),
     p_program(0),
     p_vao(0),
-    p_allocated(false),
     p_primaryslot(GS_UNDEFINED)
 {
     p_owner->debug(DebugMessageLevel::Information, "State object created\n");
@@ -86,10 +85,6 @@ GSbool xGSStateImpl::allocate(const GSstatedescription &desc)
 
                 xGSGeometryBufferImpl *buffer =
                     static_cast<xGSGeometryBufferImpl*>(inputlayout->buffer);
-                if (!buffer->allocated()) {
-                    ReleaseRendererResources();
-                    return p_owner->error(GSE_INVALIDOBJECT);
-                }
 
                 slot.buffer = buffer;
                 buffer->AddRef();
@@ -354,8 +349,6 @@ GSbool xGSStateImpl::allocate(const GSstatedescription &desc)
     p_polygonoffset = desc.rasterizer.polygonoffset;
     p_multisample = desc.rasterizer.multisample;
 
-    p_allocated = true;
-
     return p_owner->error(GS_OK);
  }
 
@@ -539,8 +532,6 @@ void xGSStateImpl::ReleaseRendererResources()
     }
 
     p_staticstate.ReleaseRendererResources(p_owner);
-
-    p_allocated = false;
 }
 
 GSbool xGSStateImpl::uniformIsSampler(GLenum type) const

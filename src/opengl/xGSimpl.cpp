@@ -530,10 +530,6 @@ GSbool xGSImpl::SetState(IxGSState state)
 
     xGSStateImpl *stateimpl = static_cast<xGSStateImpl*>(state);
 
-    if (!stateimpl->allocated()) {
-        return error(GSE_INVALIDOBJECT);
-    }
-
     if (!stateimpl->validate(p_colorformats, p_depthstencilformat)) {
         return error(GSE_INVALIDOBJECT);
     }
@@ -550,7 +546,7 @@ GSbool xGSImpl::SetInput(IxGSInput input)
     }
 
     xGSInputImpl *inputimpl = static_cast<xGSInputImpl*>(input);
-    if (inputimpl == nullptr || !inputimpl->allocated()) {
+    if (inputimpl == nullptr) {
         return error(GSE_INVALIDOBJECT);
     }
 
@@ -577,10 +573,6 @@ GSbool xGSImpl::SetParameters(IxGSParameters parameters)
     }
 
     xGSParametersImpl *parametersimpl = static_cast<xGSParametersImpl*>(parameters);
-
-    if (!parametersimpl->allocated()) {
-        return error(GSE_INVALIDOBJECT);
-    }
 
     if (p_state == nullptr || parametersimpl->state() != p_state) {
         return error(GSE_INVALIDSTATE);
@@ -792,9 +784,6 @@ GSbool xGSImpl::BeginCapture(GSenum mode, IxGSGeometryBuffer buffer)
     }
 
     xGSGeometryBufferImpl *bufferimpl = static_cast<xGSGeometryBufferImpl*>(buffer);
-    if (!bufferimpl->allocated()) {
-        return error(GSE_INVALIDOBJECT);
-    }
 
     p_capturebuffer = bufferimpl;
     p_capturebuffer->AddRef();
@@ -845,7 +834,7 @@ GSbool xGSImpl::BeginImmediateDrawing(IxGSGeometryBuffer buffer, GSuint flags)
     }
 
     xGSGeometryBufferImpl *bufferimpl = static_cast<xGSGeometryBufferImpl*>(buffer);
-    if (!bufferimpl->allocated() || bufferimpl->type() != GS_GBTYPE_IMMEDIATE) {
+    if (bufferimpl->type() != GS_GBTYPE_IMMEDIATE) {
         return error(GSE_INVALIDOBJECT);
     }
 

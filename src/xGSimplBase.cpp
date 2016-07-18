@@ -257,10 +257,6 @@ GSbool xGSImplBase::Draw(IxGSGeometry geometry_to_draw, const T &drawer)
     }
 
     xGSGeometryImpl *geometry = static_cast<xGSGeometryImpl*>(geometry_to_draw);
-    if (!geometry->allocated()) {
-        return error(GSE_INVALIDOBJECT);
-    }
-
     xGSGeometryBufferImpl *buffer = geometry->buffer();
 
 #ifdef _DEBUG
@@ -323,9 +319,6 @@ GSbool xGSImplBase::MultiDraw(IxGSGeometry *geometries_to_draw, GSuint count, co
 
     for (GSuint n = 0; n < count; ++n) {
         xGSGeometryImpl *geometry = static_cast<xGSGeometryImpl*>(geometries_to_draw[n]);
-        if (!geometry->allocated()) {
-            return error(GSE_INVALIDOBJECT);
-        }
 
 #ifdef _DEBUG
         xGSGeometryBufferImpl *buffer = geometry->buffer();

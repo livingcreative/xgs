@@ -61,8 +61,6 @@ namespace xGS
     public:
         GSbool allocate(const GSstatedescription &desc);
 
-        bool allocated() const { return p_allocated; }
-
         // TODO: move vertex array declarations from GSvertexdecl here
         int attribLocation(const char *name) const;
 
@@ -131,8 +129,6 @@ namespace xGS
         typedef std::vector<ParameterSlot> ParamSlotList;
 
     private:
-        bool              p_allocated;
-
         AttributeList     p_attributes;
         UniformList       p_uniforms;
         UniformBlockList  p_uniformblocks;
