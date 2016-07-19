@@ -21,18 +21,19 @@
 #include "xGSinput.h"
 #include "xGSparameters.h"
 
-#ifdef _DEBUG
-    #ifdef WIN32
-        #include <Windows.h>
-    #endif
-#endif
+#include <Windows.h>
+#include <d3d11.h>
 
 
 using namespace xGS;
 
 
 xGSImpl::xGSImpl() :
-    xGSImplBase()
+    xGSImplBase(),
+    p_swapchain(nullptr),
+    p_device(nullptr),
+    p_context(nullptr),
+    p_defaultrt(nullptr)
 {
     // TODO: xGSImpl::xGSImpl DX11
 
@@ -50,6 +51,42 @@ void xGSImpl::CreateRendererImpl(const GSrendererdescription &desc)
 {
     // TODO: xGSImpl::CreateRenderer
 
+    DXGI_SWAP_CHAIN_DESC swapchaindesc = {};
+    swapchaindesc.SampleDesc.Count = 1;
+    swapchaindesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    swapchaindesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+    swapchaindesc.BufferCount = 1;
+    swapchaindesc.OutputWindow = HWND(desc.widget);
+    swapchaindesc.Windowed = true;
+
+    HRESULT result = D3D11CreateDeviceAndSwapChain(
+        nullptr, D3D_DRIVER_TYPE_HARDWARE, 0, 0, nullptr, 0, D3D11_SDK_VERSION,
+        &swapchaindesc, &p_swapchain, &p_device, nullptr, &p_context
+    );
+    if (result != S_OK) {
+        error(GSE_SUBSYSTEMFAILED);
+        return;
+    }
+
+    ID3D11Texture2D *backbuffertex = nullptr;
+    p_swapchain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&backbuffertex));
+    if (backbuffertex == nullptr) {
+        DestroyRendererImpl();
+        error(GSE_SUBSYSTEMFAILED);
+        return;
+    }
+    p_device->CreateRenderTargetView(backbuffertex, nullptr, &p_defaultrt);
+    backbuffertex->Release();
+
+    if (p_defaultrt == nullptr) {
+        DestroyRendererImpl();
+        error(GSE_SUBSYSTEMFAILED);
+        return;
+    }
+
+    // TODO: depth/stencil
+    p_context->OMSetRenderTargets(1, &p_defaultrt, nullptr);
+
     memset(p_timerqueries, 0, sizeof(p_timerqueries));
     p_timerindex = 0;
     p_opentimerqueries = 0;
@@ -61,11 +98,17 @@ void xGSImpl::CreateRendererImpl(const GSrendererdescription &desc)
 #endif
 
     DefaultRTFormats();
+
+    p_error = GS_OK;
 }
 
 void xGSImpl::DestroyRendererImpl()
 {
     // TODO: xGSImpl::DestroyRendererImpl
+    ::Release(p_defaultrt);
+    ::Release(p_swapchain);
+    ::Release(p_device);
+    ::Release(p_context);
 }
 
 void xGSImpl::CreateSamplersImpl(const GSsamplerdescription *samplers, GSuint count)
@@ -79,16 +122,44 @@ void xGSImpl::GetRenderTargetSizeImpl(GSsize &size)
 {
     // TODO: xGSImpl::RenderTargetSize
     //size = p_rendertarget ? p_rendertarget->size() : ;
+    if (p_rendertarget) {
+        size = p_rendertarget->size();
+    } else {
+        DXGI_SWAP_CHAIN_DESC desc;
+        p_swapchain->GetDesc(&desc);
+        size.width = desc.BufferDesc.Width;
+        size.height = desc.BufferDesc.Height;
+    }
 }
 
 void xGSImpl::ClearImpl(GSbool color, GSbool depth, GSbool stencil, const GScolor &colorvalue, float depthvalue, GSdword stencilvalue)
 {
-    // TODO: xGSImpl::ClearImpl
+    // TODO: non default RT's, depthstencil
+    ID3D11RenderTargetView *rt = p_defaultrt;
+    ID3D11DepthStencilView *ds = nullptr;
+
+    if (color) {
+        p_context->ClearRenderTargetView(p_defaultrt, &colorvalue.r);
+    }
+
+    if (ds && (depth || stencil)) {
+        UINT flags = 0;
+
+        if (depth) {
+            flags |= D3D11_CLEAR_DEPTH;
+        }
+
+        if (stencil) {
+            flags |= D3D11_CLEAR_STENCIL;
+        }
+
+        p_context->ClearDepthStencilView(ds, flags, depthvalue, stencilvalue);
+    }
 }
 
 void xGSImpl::DisplayImpl()
 {
-    // TODO: xGSImpl::DisplayImpl()
+    p_swapchain->Present(0, 0);
 }
 
 void xGSImpl::SetRenderTargetImpl()
@@ -98,7 +169,13 @@ void xGSImpl::SetRenderTargetImpl()
 
 void xGSImpl::SetViewportImpl(const GSrect &viewport)
 {
-    // TODO: xGSImpl::SetViewportImpl
+    D3D11_VIEWPORT d3dviewport = {
+        FLOAT(viewport.left), FLOAT(viewport.top),
+        FLOAT(viewport.width), FLOAT(viewport.height),
+        0, 1
+    };
+
+    p_context->RSSetViewports(1, &d3dviewport);
 }
 
 void xGSImpl::SetStencilReferenceImpl(GSuint ref)

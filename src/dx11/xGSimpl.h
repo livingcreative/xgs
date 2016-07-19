@@ -22,6 +22,12 @@
 #include <unordered_map>
 
 
+struct IDXGISwapChain;
+struct ID3D11Device;
+struct ID3D11DeviceContext;
+struct ID3D11RenderTargetView;
+
+
 namespace xGS
 {
 
@@ -125,12 +131,17 @@ namespace xGS
     private:
         typedef std::unordered_map<GSvalue, TextureFormatDescriptor> TextureDescriptorsMap;
 
-        TextureDescriptorsMap p_texturedescs;
+        IDXGISwapChain         *p_swapchain;
+        ID3D11Device           *p_device;
+        ID3D11DeviceContext    *p_context;
+        ID3D11RenderTargetView *p_defaultrt;
 
-        int                   p_timerqueries[1024];
-        GSuint                p_timerindex;
-        GSuint                p_opentimerqueries;
-        GSuint                p_timerscount;
+        TextureDescriptorsMap   p_texturedescs;
+
+        int                     p_timerqueries[1024];
+        GSuint                  p_timerindex;
+        GSuint                  p_opentimerqueries;
+        GSuint                  p_timerscount;
     };
 
 } // namespace xGS
