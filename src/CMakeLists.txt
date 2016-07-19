@@ -36,8 +36,6 @@ set(HEADERS
 
 	# private source common headers
 	IUnknownImpl.h
-	IxGSImpl.h
-	xGSimplBase.h
 	xGSobject.h
 	xGSutil.h
 )
@@ -106,6 +104,6 @@ if (MSVC)
 	set_target_properties(
 		${xGSSharedLib}
 		PROPERTIES
-		LINK_FLAGS "/DEF:\"${PROJECT_SOURCE_DIR}/win/${xGSSharedLib}.def\""
+		LINK_FLAGS "/DEF:\"${PROJECT_SOURCE_DIR}/../xGS.def\""
 	)
 endif ()

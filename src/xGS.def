@@ -7,7 +7,7 @@
 ;
 ;  https://github.com/livingcreative/xgs
 ;
-;  opengl/win/xGSOpenGL.def
+;  xGS.def
 ;      DEF file for xGS DLL on Windows
 ;
 
