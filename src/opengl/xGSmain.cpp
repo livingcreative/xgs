@@ -22,11 +22,12 @@
 #include "xGSparameters.cpp"
 #include "xGSstate.cpp"
 #include "xGSinput.cpp"
-#include "xGSimplBase.cpp"
-#include "xGSimpl.cpp"
 #include "xGSgeometrybuffer.cpp"
 #include "xGSgeometry.cpp"
 #include "xGSframebuffer.cpp"
+#include "xGSimplBase.cpp"
+#include "xGSimpl.cpp"
+#include "IxGSimpl.cpp"
 
 #include "xGScontextplatform.h"
 #include "xGScontextplatform.cpp"
@@ -37,6 +38,6 @@ using namespace xGS;
 
 GSbool Create(IxGS *xgs)
 {
-    *xgs = xGSImpl::create();
+    *xgs = IxGSImpl::create();
     return *xgs != nullptr;
 }

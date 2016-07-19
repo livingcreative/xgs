@@ -1360,11 +1360,11 @@ public:
     virtual GSbool xGSAPI Display() = 0;
 
     virtual GSbool xGSAPI SetRenderTarget(IxGSFrameBuffer rendertarget) = 0;
-    virtual GSbool xGSAPI SetViewport(const GSrect &viewport) = 0;
     virtual GSbool xGSAPI SetState(IxGSState state) = 0;
     virtual GSbool xGSAPI SetInput(IxGSInput input) = 0;
     virtual GSbool xGSAPI SetParameters(IxGSParameters parameters) = 0;
 
+    virtual GSbool xGSAPI SetViewport(const GSrect &viewport) = 0;
     virtual GSbool xGSAPI SetStencilReference(GSuint ref) = 0;
     virtual GSbool xGSAPI SetBlendColor(const GScolor &color) = 0;
     virtual GSbool xGSAPI SetUniformValue(GSenum set, GSenum slot, GSenum type, const void *value) = 0;
@@ -1401,7 +1401,7 @@ public:
     // timer query API wip, for testing only now
     virtual GSbool xGSAPI BeginTimerQuery() = 0;
     virtual GSbool xGSAPI EndTimerQuery() = 0;
-    virtual GSbool xGSAPI TimstampQuery() = 0;
+    virtual GSbool xGSAPI TimestampQuery() = 0;
     virtual GSbool xGSAPI GatherTimers(GSuint flags, GSuint64 *values, GSuint count) = 0;
 };
 

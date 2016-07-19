@@ -33,9 +33,7 @@ namespace xGS
     {
     public:
         xGSImpl();
-        ~xGSImpl() override;
 
-    public:
         // cpas
         const GScaps& caps() const { return p_caps; }
 
@@ -49,64 +47,51 @@ namespace xGS
         void debugTrackGLError(const char *text);
 #endif
 
-    // IxGS
-    public:
-        GSbool xGSAPI CreateRenderer(const GSrendererdescription &desc) override;
-        GSbool xGSAPI DestroyRenderer(GSbool restorevideomode) override;
+    // IxGS platform specific implementation
+    protected:
+        void CreateRendererImpl(const GSrendererdescription &desc);
+        void DestroyRendererImpl();
 
-        GSbool xGSAPI CreateObject(GSenum type, const void *desc, void **result) override;
-        GSbool xGSAPI CreateSamplers(const GSsamplerdescription *samplers, GSuint count) override;
+        void CreateSamplersImpl(const GSsamplerdescription *samplers, GSuint count);
 
-        GSbool xGSAPI GetRenderTargetSize(GSsize &size) override;
+        void GetRenderTargetSizeImpl(GSsize &size);
 
-        GSbool xGSAPI Clear(GSbool color, GSbool depth, GSbool stencil, const GScolor &colorvalue, float depthvalue, GSdword stencilvalue) override;
-        GSbool xGSAPI Display() override;
+        void ClearImpl(GSbool color, GSbool depth, GSbool stencil, const GScolor &colorvalue, float depthvalue, GSdword stencilvalue);
+        void DisplayImpl();
 
-        GSbool xGSAPI SetRenderTarget(IxGSFrameBuffer rendertarget) override;
-        GSbool xGSAPI SetViewport(const GSrect &viewport) override;
-        GSbool xGSAPI SetState(IxGSState state) override;
-        GSbool xGSAPI SetInput(IxGSInput input) override;
-        GSbool xGSAPI SetParameters(IxGSParameters parameters) override;
+        void SetRenderTargetImpl();
 
-        GSbool xGSAPI SetStencilReference(GSuint ref) override;
-        GSbool xGSAPI SetBlendColor(const GScolor &color) override;
-        GSbool xGSAPI SetUniformValue(GSenum set, GSenum slot, GSenum type, const void *value) override;
+        void SetViewportImpl(const GSrect &viewport);
+        void SetStencilReferenceImpl(GSuint ref);
+        void SetBlendColorImpl(const GScolor &color);
+        void SetUniformValueImpl(GSenum type, GSint location, const void *value);
 
-        GSbool xGSAPI DrawGeometry(IxGSGeometry geometry) override;
-        GSbool xGSAPI DrawGeometryInstanced(IxGSGeometry geometry, GSuint count) override;
-        GSbool xGSAPI DrawGeometries(IxGSGeometry *geometries, GSuint count) override;
-        GSbool xGSAPI DrawGeometriesInstanced(IxGSGeometry *geometries, GSuint count, GSuint instancecount) override;
+        void BeginCaptureImpl(GSenum mode);
+        void EndCaptureImpl(GSuint *elementcount);
 
-        GSbool xGSAPI BeginCapture(GSenum mode, IxGSGeometryBuffer buffer) override;
-        GSbool xGSAPI EndCapture(GSuint *elementcount) override;
+        void DrawImmediatePrimitives(xGSGeometryBufferImpl *buffer);
 
-        GSbool xGSAPI BeginImmediateDrawing(IxGSGeometryBuffer buffer, GSuint flags) override;
-        GSbool xGSAPI ImmediatePrimitive(GSenum type, GSuint vertexcount, GSuint indexcount, GSuint flags, GSimmediateprimitive *primitive) override;
-        GSbool xGSAPI EndImmediateDrawing() override;
+        void BuildMIPsImpl(xGSTextureImpl *texture);
 
-        GSbool xGSAPI BuildMIPs(IxGSTexture texture) override;
-
-        GSbool xGSAPI CopyImage(
-            IxGSTexture src, GSuint srclevel, GSuint srcx, GSuint srcy, GSuint srcz,
-            IxGSTexture dst, GSuint dstlevel, GSuint dstx, GSuint dsty, GSuint dstz,
+        void CopyImageImpl(
+            xGSTextureImpl *src, GSuint srclevel, GSuint srcx, GSuint srcy, GSuint srcz,
+            xGSTextureImpl *dst, GSuint dstlevel, GSuint dstx, GSuint dsty, GSuint dstz,
             GSuint width, GSuint height, GSuint depth
-        ) override;
-        GSbool xGSAPI CopyData(xGSObject *src, xGSObject *dst, GSuint readoffset, GSuint writeoffset, GSuint size, GSuint flags) override;
+        );
 
-        GSbool xGSAPI BufferCommitment(xGSObject *buffer, GSuint offset, GSuint size, GSbool commit, GSuint flags) override;
-        GSbool xGSAPI GeometryBufferCommitment(IxGSGeometryBuffer buffer, IxGSGeometry *geometries, GSuint count, GSbool commit) override;
-        GSbool xGSAPI TextureCommitment(IxGSTexture texture, GSuint level, GSuint x, GSuint y, GSuint z, GSuint width, GSuint height, GSuint depth, GSbool commit) override;
+        void CopyDataImpl(xGSObject *src, xGSObject *dst, GSuint readoffset, GSuint writeoffset, GSuint size, GSuint flags);
 
-        GSbool xGSAPI Compute(IxGSComputeState state, GSuint x, GSuint y, GSuint z) override;
+        void BufferCommitmentImpl(xGSObject *buffer, GSuint offset, GSuint size, GSbool commit, GSuint flags);
+        void GeometryBufferCommitmentImpl(xGSGeometryBufferImpl *buffer);
+        void GeometryBufferCommitmentGeometry(xGSGeometryImpl *geometry, GSuint vertexsize, GSuint indexsize, GSbool commit);
+        void TextureCommitmentImpl(xGSTextureImpl *texture, GSuint level, GSuint x, GSuint y, GSuint z, GSuint width, GSuint height, GSuint depth, GSbool commit);
 
-        GSbool xGSAPI BeginTimerQuery() override;
-        GSbool xGSAPI EndTimerQuery() override;
-        GSbool xGSAPI TimstampQuery() override;
-        GSbool xGSAPI GatherTimers(GSuint flags, GSuint64 *values, GSuint count) override;
+        void BeginTimerQueryImpl();
+        void EndTimerQueryImpl();
+        void TimestampQueryImpl();
+        void GatherTimersImpl(GSuint flags, GSuint64 *values, GSuint count);
 
     public:
-        static IxGS create();
-
         struct TextureFormatDescriptor
         {
             GSint  bpp; // BYTES per pixel
@@ -134,37 +119,35 @@ namespace xGS
 
     private:
         void AddTextureFormatDescriptor(GSvalue format, GSint _bpp, GLenum _intformat, GLenum _format, GLenum _type);
-        void RenderTargetSize(GSsize &size);
 
         void DefaultRTFormats();
 
-        void DrawImmediatePrimitives(xGSGeometryBufferImpl *buffer);
-
-    private:
+    protected:
         struct Sampler
         {
             GLuint sampler;
             GSuint refcount;
         };
 
-        typedef std::unique_ptr<xGScontext>                          ContextPtr;
-        typedef std::vector<Sampler>                                 SamplerList;
-        typedef std::unordered_map<GSvalue, TextureFormatDescriptor> TextureDescriptorsMap;
+        typedef std::vector<Sampler> SamplerList;
+
+        SamplerList p_samplerlist;
+        GScaps      p_caps;
 
     private:
-        ContextPtr             p_context;
+        typedef std::unique_ptr<xGScontext> ContextPtr;
+        typedef std::unordered_map<GSvalue, TextureFormatDescriptor> TextureDescriptorsMap;
 
-        SamplerList            p_samplerlist;
+        ContextPtr            p_context;
 
-        GScaps                 p_caps;
-        TextureDescriptorsMap  p_texturedescs;
+        TextureDescriptorsMap p_texturedescs;
 
-        GLuint                 p_capturequery;
+        GLuint                p_capturequery;
 
-        GLuint                 p_timerqueries[1024];
-        GSuint                 p_timerindex;
-        GSuint                 p_opentimerqueries;
-        GSuint                 p_timerscount;
+        GLuint                p_timerqueries[1024];
+        GSuint                p_timerindex;
+        GSuint                p_opentimerqueries;
+        GSuint                p_timerscount;
     };
 
 } // namespace xGS

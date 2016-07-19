@@ -63,16 +63,6 @@ xGSImpl::xGSImpl() :
     p_systemstate = SYSTEM_READY;
 }
 
-xGSImpl::~xGSImpl()
-{
-    if (p_systemstate == CAPTURE) {
-        EndCapture(nullptr);
-    }
-    if (p_systemstate == RENDERER_READY) {
-        DestroyRenderer(true);
-    }
-}
-
 #ifdef _DEBUG
 void xGSImpl::debugTrackGLError(const char *text)
 {
@@ -96,18 +86,11 @@ void xGSImpl::debugTrackGLError(const char *text)
 }
 #endif
 
-GSbool xGSImpl::CreateRenderer(const GSrendererdescription &desc)
+void xGSImpl::CreateRendererImpl(const GSrendererdescription &desc)
 {
-    if (!ValidateState(SYSTEM_READY, true, false, false)) {
-        return GS_FALSE;
-    }
-
-    // videomode
-    //
-
     p_error = p_context->CreateRenderer(desc);
     if (p_error != GS_OK) {
-        return error(p_error);
+        return;
     }
 
 #ifdef _DEBUG
@@ -283,78 +266,21 @@ GSbool xGSImpl::CreateRenderer(const GSrendererdescription &desc)
 #endif
 
     DefaultRTFormats();
-
-    p_systemstate = RENDERER_READY;
-
-    return error(GS_OK);
 }
 
-GSbool xGSImpl::DestroyRenderer(GSbool restorevideomode)
+void xGSImpl::DestroyRendererImpl()
 {
-    if (!ValidateState(RENDERER_READY, true, true, false)) {
-        return GS_FALSE;
-    }
-
-    CleanupObjects();
-
     for (auto &sampler : p_samplerlist) {
         glDeleteSamplers(1, &sampler.sampler);
     }
-
     glDeleteQueries(1, &p_capturequery);
-
     glDeleteQueries(p_timerscount, p_timerqueries);
 
     p_context->DestroyRenderer();
-
-    p_systemstate = SYSTEM_READY;
-
-    return GS_TRUE;
 }
 
-
-#define GS_CREATE_OBJECT(typeconst, impltype, desctype)\
-        case typeconst: {\
-            impltype *object = impltype::create(this, typeconst);\
-            if (object->allocate(*reinterpret_cast<const desctype*>(desc))) {\
-                *result = object;\
-                return error(GS_OK);\
-            } else {\
-                object->Release();\
-                return GS_FALSE;\
-            }\
-        }
-
-GSbool xGSImpl::CreateObject(GSenum type, const void *desc, void **result)
+void xGSImpl::CreateSamplersImpl(const GSsamplerdescription *samplers, GSuint count)
 {
-    // TODO: make refcounting and adding to object list only after successful creation
-    switch (type) {
-        GS_CREATE_OBJECT(GS_OBJECTTYPE_GEOMETRY, xGSGeometryImpl, GSgeometrydescription)
-        GS_CREATE_OBJECT(GS_OBJECTTYPE_GEOMETRYBUFFER, xGSGeometryBufferImpl, GSgeometrybufferdescription)
-        GS_CREATE_OBJECT(GS_OBJECTTYPE_DATABUFFER, xGSDataBufferImpl, GSdatabufferdescription)
-        GS_CREATE_OBJECT(GS_OBJECTTYPE_TEXTURE, xGSTextureImpl, GStexturedescription)
-        GS_CREATE_OBJECT(GS_OBJECTTYPE_FRAMEBUFFER, xGSFrameBufferImpl, GSframebufferdescription)
-        GS_CREATE_OBJECT(GS_OBJECTTYPE_STATE, xGSStateImpl, GSstatedescription)
-        GS_CREATE_OBJECT(GS_OBJECTTYPE_INPUT, xGSInputImpl, GSinputdescription)
-        GS_CREATE_OBJECT(GS_OBJECTTYPE_PARAMETERS, xGSParametersImpl, GSparametersdescription)
-    }
-
-    return error(GSE_INVALIDENUM);
-}
-
-#undef GS_CREATE_OBJECT
-
-GSbool xGSImpl::CreateSamplers(const GSsamplerdescription *samplers, GSuint count)
-{
-    GSuint references = 0;
-    for (auto &s : p_samplerlist) {
-        references += s.refcount;
-    }
-
-    if (references) {
-        return error(GSE_INVALIDOPERATION);
-    }
-
     for (auto &s : p_samplerlist) {
         glDeleteSamplers(1, &s.sampler);
     }
@@ -401,28 +327,18 @@ GSbool xGSImpl::CreateSamplers(const GSsamplerdescription *samplers, GSuint coun
         ++samplers;
     }
 
-    return error(GS_OK);
+    p_error = GS_OK;
 }
 
-
-GSbool xGSImpl::GetRenderTargetSize(GSsize &size)
+void xGSImpl::GetRenderTargetSizeImpl(GSsize &size)
 {
-    if (!ValidateState(RENDERER_READY, false, false, false)) {
-        return GS_FALSE;
-    }
-    RenderTargetSize(size);
-    return error(GS_OK);
+    size = p_rendertarget ? p_rendertarget->size() : p_context->RenderTargetSize();
 }
 
-
-GSbool xGSImpl::Clear(GSbool color, GSbool depth, GSbool stencil, const GScolor &colorvalue, float depthvalue, GSdword stencilvalue)
+void xGSImpl::ClearImpl(GSbool color, GSbool depth, GSbool stencil, const GScolor &colorvalue, float depthvalue, GSdword stencilvalue)
 {
     // NOTE: clear doesn't work if rasterizer discard enabled
     //       depth buffer is not cleared when depth mask is FALSE
-
-    if (!ValidateState(RENDERER_READY, true, true, false)) {
-        return GS_FALSE;
-    }
 
     GLuint mask = 0;
 
@@ -442,38 +358,15 @@ GSbool xGSImpl::Clear(GSbool color, GSbool depth, GSbool stencil, const GScolor 
     }
 
     glClear(mask);
-
-    return error(GS_OK);
 }
 
-GSbool xGSImpl::Display()
+void xGSImpl::DisplayImpl()
 {
-    if (!ValidateState(RENDERER_READY, true, true, false)) {
-        return GS_FALSE;
-    }
-
-    return p_context->Display();
+    error(p_context->Display() ? GS_OK : GSE_SUBSYSTEMFAILED);
 }
 
-
-GSbool xGSImpl::SetRenderTarget(IxGSFrameBuffer rendertarget)
+void xGSImpl::SetRenderTargetImpl()
 {
-    if (!ValidateState(RENDERER_READY, true, true, false)) {
-        return GS_FALSE;
-    }
-
-    if (p_rendertarget) {
-        p_rendertarget->unbind();
-        p_rendertarget->Release();
-    }
-
-    p_rendertarget = static_cast<xGSFrameBufferImpl*>(rendertarget);
-
-    if (p_rendertarget) {
-        p_rendertarget->AddRef();
-        p_rendertarget->bind();
-    }
-
     bool srgb = false;
 
     if (p_rendertarget == nullptr) {
@@ -485,196 +378,66 @@ GSbool xGSImpl::SetRenderTarget(IxGSFrameBuffer rendertarget)
     }
 
     srgb ? glEnable(GL_FRAMEBUFFER_SRGB) : glDisable(GL_FRAMEBUFFER_SRGB);
-
-    // reset current state, after RT change any state should be rebound
-    xGSImplBase::SetState(p_caps, static_cast<xGSStateImpl*>(nullptr));
-
-    return error(GS_OK);
 }
 
-GSbool xGSImpl::SetViewport(const GSrect &viewport)
+void xGSImpl::SetViewportImpl(const GSrect &viewport)
 {
-    // NOTE: actually there's no dependency on immediate mode
-    //          consider ignore immediate mode
-    if (!ValidateState(RENDERER_READY, true, true, false)) {
-        return GS_FALSE;
-    }
-
     GSsize sz;
-    RenderTargetSize(sz);
+    GetRenderTargetSizeImpl(sz);
 
     glViewport(
         viewport.left, sz.height - viewport.height - viewport.top,
         viewport.width, viewport.height
     );
-
-    return error(GS_OK);
 }
 
-GSbool xGSImpl::SetState(IxGSState state)
+void xGSImpl::SetStencilReferenceImpl(GSuint ref)
 {
-    if (!ValidateState(RENDERER_READY, true, true, false)) {
-        return GS_FALSE;
-    }
-
-    if (!state) {
-        return error(GSE_INVALIDOBJECT);
-    }
-
-    xGSStateImpl *stateimpl = static_cast<xGSStateImpl*>(state);
-
-    if (!stateimpl->validate(p_colorformats, p_depthstencilformat)) {
-        return error(GSE_INVALIDOBJECT);
-    }
-
-    xGSImplBase::SetState(p_caps, stateimpl);
-
-    return error(GS_OK);
-}
-
-GSbool xGSImpl::SetInput(IxGSInput input)
-{
-    if (!ValidateState(RENDERER_READY, false, true, false)) {
-        return GS_FALSE;
-    }
-
-    xGSInputImpl *inputimpl = static_cast<xGSInputImpl*>(input);
-    if (inputimpl == nullptr) {
-        return error(GSE_INVALIDOBJECT);
-    }
-
-    if (p_state == nullptr || inputimpl->state() != p_state) {
-        return error(GSE_INVALIDOPERATION);
-    }
-
-    AttachObject(p_caps, p_input, inputimpl);
-
-    return error(GS_OK);
-}
-
-GSbool xGSImpl::SetParameters(IxGSParameters parameters)
-{
-    // TODO: ability to change parameters while being in immediate mode
-    //      actually parameters change can be recorded into immediate sequence
-    //      and executed later, when immediate buffer will be flushed
-    if (!ValidateState(RENDERER_READY, false, true, false)) {
-        return GS_FALSE;
-    }
-
-    if (!parameters) {
-        return error(GSE_INVALIDOBJECT);
-    }
-
-    xGSParametersImpl *parametersimpl = static_cast<xGSParametersImpl*>(parameters);
-
-    if (p_state == nullptr || parametersimpl->state() != p_state) {
-        return error(GSE_INVALIDSTATE);
-    }
-
-    AttachObject(p_caps, p_parameters[parametersimpl->setindex()], parametersimpl);
-
-    return error(GS_OK);
-}
-
-GSbool xGSImpl::SetStencilReference(GSuint ref)
-{
-    // TODO: same as SetParameters behaviour
-    if (!ValidateState(RENDERER_READY, false, true, false)) {
-        return GS_FALSE;
-    }
-
-    if (!p_state) {
-        return error(GSE_INVALIDSTATE);
-    }
-
     // TODO
-
-    return error(GSE_UNIMPLEMENTED);
+    error(GSE_UNIMPLEMENTED);
 }
 
-GSbool xGSImpl::SetBlendColor(const GScolor &color)
+void xGSImpl::SetBlendColorImpl(const GScolor &color)
 {
-    // TODO: same as SetParameters behaviour
-    if (!ValidateState(RENDERER_READY, false, true, false)) {
-        return GS_FALSE;
-    }
-
-    if (!p_state) {
-        return error(GSE_INVALIDSTATE);
-    }
-
     glBlendColor(color.r, color.g, color.b, color.a);
-
-    return error(GSE_UNIMPLEMENTED);
 }
 
-GSbool xGSImpl::SetUniformValue(GSenum set, GSenum slot, GSenum type, const void *value)
+void xGSImpl::SetUniformValueImpl(GSenum type, GSint location, const void *value)
 {
-    // TODO: same as SetParameters behaviour
-    if (!ValidateState(RENDERER_READY, false, true, false)) {
-        return GS_FALSE;
+    switch (type) {
+        case GSU_SCALAR:
+            glUniform1fv(location, 1, reinterpret_cast<const GLfloat*>(value));
+            break;
+
+        case GSU_VEC2:
+            glUniform2fv(location, 1, reinterpret_cast<const GLfloat*>(value));
+            break;
+
+        case GSU_VEC3:
+            glUniform3fv(location, 1, reinterpret_cast<const GLfloat*>(value));
+            break;
+
+        case GSU_VEC4:
+            glUniform4fv(location, 1, reinterpret_cast<const GLfloat*>(value));
+            break;
+
+        case GSU_MAT2:
+            glUniformMatrix2fv(location, 1, GL_FALSE, reinterpret_cast<const GLfloat*>(value));
+            break;
+
+        case GSU_MAT3:
+            glUniformMatrix3fv(location, 1, GL_FALSE, reinterpret_cast<const GLfloat*>(value));
+            break;
+
+        case GSU_MAT4:
+            glUniformMatrix4fv(location, 1, GL_FALSE, reinterpret_cast<const GLfloat*>(value));
+            break;
+
+        default:
+            break;
     }
-
-    if (!p_state) {
-        return error(GSE_INVALIDSTATE);
-    }
-
-    GSuint setindex = set - GSPS_0;
-    if (setindex >= p_state->parameterSetCount()) {
-        return error(GSE_INVALIDENUM);
-    }
-
-    const GSParameterSet &paramset = p_state->parameterSet(setindex);
-
-    GSuint slotindex = slot - GSPS_0 + paramset.first;
-    if (slotindex >= paramset.onepastlast) {
-        return error(GSE_INVALIDENUM);
-    }
-
-    const xGSStateImpl::ParameterSlot &paramslot = p_state->parameterSlot(slotindex);
-
-    if (paramslot.type != GSPD_CONSTANT) {
-        return error(GSE_INVALIDOPERATION);
-    }
-
-    // TODO: check type or remove type parameter?
-    if (paramslot.location != GS_DEFAULT) {
-        switch (type) {
-            case GSU_SCALAR:
-                glUniform1fv(paramslot.location, 1, reinterpret_cast<const GLfloat*>(value));
-                break;
-
-            case GSU_VEC2:
-                glUniform2fv(paramslot.location, 1, reinterpret_cast<const GLfloat*>(value));
-                break;
-
-            case GSU_VEC3:
-                glUniform3fv(paramslot.location, 1, reinterpret_cast<const GLfloat*>(value));
-                break;
-
-            case GSU_VEC4:
-                glUniform4fv(paramslot.location, 1, reinterpret_cast<const GLfloat*>(value));
-                break;
-
-            case GSU_MAT2:
-                glUniformMatrix2fv(paramslot.location, 1, GL_FALSE, reinterpret_cast<const GLfloat*>(value));
-                break;
-
-            case GSU_MAT3:
-                glUniformMatrix3fv(paramslot.location, 1, GL_FALSE, reinterpret_cast<const GLfloat*>(value));
-                break;
-
-            case GSU_MAT4:
-                glUniformMatrix4fv(paramslot.location, 1, GL_FALSE, reinterpret_cast<const GLfloat*>(value));
-                break;
-
-            default:
-                return error(GSE_INVALIDENUM);
-        }
-    }
-
-    return error(GS_OK);
 }
+
 
 struct SimpleDrawer
 {
@@ -742,61 +505,17 @@ private:
     GSuint p_count;
 };
 
-GSbool xGSImpl::DrawGeometry(IxGSGeometry geometry)
+
+void xGSImpl::BeginCaptureImpl(GSenum mode)
 {
-    SimpleDrawer drawer;
-    return Draw(geometry, drawer);
-}
-
-GSbool xGSImpl::DrawGeometryInstanced(IxGSGeometry geometry, GSuint count)
-{
-    InstancedDrawer drawer(count);
-    return Draw(geometry, drawer);
-}
-
-GSbool xGSImpl::DrawGeometries(IxGSGeometry *geometries, GSuint count)
-{
-    SimpleMultiDrawer drawer;
-    return MultiDraw(geometries, count, drawer);
-}
-
-GSbool xGSImpl::DrawGeometriesInstanced(IxGSGeometry *geometries, GSuint count, GSuint instancecount)
-{
-    InstancedMultiDrawer drawer(instancecount);
-    return MultiDraw(geometries, count, drawer);
-}
-
-GSbool xGSImpl::BeginCapture(GSenum mode, IxGSGeometryBuffer buffer)
-{
-    if (!ValidateState(RENDERER_READY, true, true, false)) {
-        return GS_FALSE;
-    }
-
-    if (!buffer) {
-        return error(GSE_INVALIDOBJECT);
-    }
-
-    xGSGeometryBufferImpl *bufferimpl = static_cast<xGSGeometryBufferImpl*>(buffer);
-
-    p_capturebuffer = bufferimpl;
-    p_capturebuffer->AddRef();
-
     glBeginQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN, p_capturequery);
 
     glBindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, 0, p_capturebuffer->getVertexBufferID());
     glBeginTransformFeedback(gl_primitive_type(mode));
-
-    p_systemstate = CAPTURE;
-
-    return error(GS_OK);
 }
 
-GSbool xGSImpl::EndCapture(GSuint *elementcount)
+void xGSImpl::EndCaptureImpl(GSuint *elementcount)
 {
-    if (!ValidateState(CAPTURE, true, true, false)) {
-        return GS_FALSE;
-    }
-
     glEndTransformFeedback();
     glBindBuffer(GL_TRANSFORM_FEEDBACK_BUFFER, 0);
 
@@ -808,135 +527,46 @@ GSbool xGSImpl::EndCapture(GSuint *elementcount)
             reinterpret_cast<GLint*>(elementcount)
         );
     }
-
-    p_capturebuffer->Release();
-    p_capturebuffer = nullptr;
-    p_systemstate = RENDERER_READY;
-
-    return error(GS_OK);
 }
 
-GSbool xGSImpl::BeginImmediateDrawing(IxGSGeometryBuffer buffer, GSuint flags)
+void xGSImpl::DrawImmediatePrimitives(xGSGeometryBufferImpl *buffer)
 {
-    if (!ValidateState(RENDERER_READY, false, true, false)) {
-        return GS_FALSE;
-    }
+    // TODO: think about MultiDraw implementation for this
 
-    if (!buffer) {
-        return error(GSE_INVALIDOBJECT);
-    }
+    for (size_t n = 0; n < buffer->immediateCount(); ++n) {
+        const xGSGeometryBufferImpl::Primitive &p = buffer->immediatePrimitive(n);
 
-    xGSGeometryBufferImpl *bufferimpl = static_cast<xGSGeometryBufferImpl*>(buffer);
-    if (bufferimpl->type() != GS_GBTYPE_IMMEDIATE) {
-        return error(GSE_INVALIDOBJECT);
-    }
-
-
-    // TODO: do i need parrallel buffer fill only and then rendering from filled buffer?
-    //          if so, special flag should indicate filling only behaviour and
-    //          in that case current input check isn't needed
-
-    if (!p_state) {
-        return error(GSE_INVALIDSTATE);
-    }
-
-#ifdef _DEBUG
-    size_t primaryslot = p_state->inputPrimarySlot();
-    xGSGeometryBufferImpl *boundbuffer =
-        primaryslot == GS_UNDEFINED ? nullptr : p_state->input(primaryslot).buffer;
-    if (p_input && boundbuffer == nullptr)  {
-        boundbuffer = p_input->primaryBuffer();
-    }
-    if (bufferimpl != boundbuffer) {
-        return error(GSE_INVALIDOBJECT);
-    }
-#endif
-
-    p_immediatebuffer = bufferimpl;
-    p_immediatebuffer->AddRef();
-
-    p_immediatebuffer->BeginImmediateDrawing();
-
-    return error(GS_OK);
-}
-
-GSbool xGSImpl::ImmediatePrimitive(GSenum type, GSuint vertexcount, GSuint indexcount, GSuint flags, GSimmediateprimitive *primitive)
-{
-    if (!ValidateState(RENDERER_READY, false, true, true)) {
-        return GS_FALSE;
-    }
-
-    bool flushnotneeded = p_immediatebuffer->EmitPrimitive(
-        type, vertexcount, indexcount,
-        flags, primitive
-    );
-
-    if (!flushnotneeded) {
-        // requested primitive can not be added, try to flush buffer
-        p_immediatebuffer->EndImmediateDrawing();
-        DrawImmediatePrimitives(p_immediatebuffer);
-        p_immediatebuffer->BeginImmediateDrawing();
-
-        if (!p_immediatebuffer->EmitPrimitive(type, vertexcount, indexcount, flags, primitive)) {
-            // primitive can not be added at all
-            return error(GSE_INVALIDVALUE);
+        if (p.indexcount == 0) {
+            glDrawArrays(p.type, p.firstvertex, p.vertexcount);
+        } else {
+            glDrawElementsBaseVertex(
+                p.type,
+                p.indexcount, gl_index_type(buffer->indexFormat()),
+                reinterpret_cast<GSptr>(index_buffer_size(buffer->indexFormat(), p.firstindex)),
+                p.firstvertex
+            );
         }
     }
-
-    return error(GS_OK);
 }
 
-GSbool xGSImpl::EndImmediateDrawing()
+void xGSImpl::BuildMIPsImpl(xGSTextureImpl *texture)
 {
-    if (!ValidateState(RENDERER_READY, false, true, true)) {
-        return GS_FALSE;
-    }
-
-    p_immediatebuffer->EndImmediateDrawing();
-    DrawImmediatePrimitives(p_immediatebuffer);
-
-    p_immediatebuffer->Release();
-    p_immediatebuffer = nullptr;
-
-    return error(GS_OK);
-}
-
-GSbool xGSImpl::BuildMIPs(IxGSTexture texture)
-{
-    if (!ValidateState(RENDERER_READY, true, false, false)) {
-        return GS_FALSE;
-    }
-
-    xGSTextureImpl *tex = static_cast<xGSTextureImpl*>(texture);
-    if (tex->getID() == 0) {
-        return error(GSE_INVALIDOBJECT);
-    }
-
     // TODO: fix state break-up with MIP level generation
-    glBindTexture(tex->target(), tex->getID());
-    glGenerateMipmap(tex->target());
-
-    return error(GS_OK);
+    glBindTexture(texture->target(), texture->getID());
+    glGenerateMipmap(texture->target());
 }
 
-GSbool xGSImpl::CopyImage(
-    IxGSTexture src, GSuint srclevel, GSuint srcx, GSuint srcy, GSuint srcz,
-    IxGSTexture dst, GSuint dstlevel, GSuint dstx, GSuint dsty, GSuint dstz,
+void xGSImpl::CopyImageImpl(
+    xGSTextureImpl *src, GSuint srclevel, GSuint srcx, GSuint srcy, GSuint srcz,
+    xGSTextureImpl *dst, GSuint dstlevel, GSuint dstx, GSuint dsty, GSuint dstz,
     GSuint width, GSuint height, GSuint depth
 )
 {
-    // TODO: checks
-
-    xGSTextureImpl *srctex = static_cast<xGSTextureImpl*>(src);
-    xGSTextureImpl *dsttex = static_cast<xGSTextureImpl*>(dst);
-
     glCopyImageSubData(
-        srctex->getID(), srctex->target(), GLint(srclevel), GLint(srcx), GLint(srcy), GLint(srcz),
-        dsttex->getID(), dsttex->target(), GLint(dstlevel), GLint(dstx), GLint(dsty), GLint(dstz),
+        src->getID(), src->target(), GLint(srclevel), GLint(srcx), GLint(srcy), GLint(srcz),
+        dst->getID(), dst->target(), GLint(dstlevel), GLint(dstx), GLint(dsty), GLint(dstz),
         width, height, depth
     );
-
-    return error(GS_OK);
 }
 
 static bool BindCopyObject(xGSObject *obj, GLenum copytarget)
@@ -975,22 +605,16 @@ static bool BindCopyObject(xGSObject *obj, GLenum copytarget)
     return true;
 }
 
-GSbool xGSImpl::CopyData(xGSObject *src, xGSObject *dst, GSuint readoffset, GSuint writeoffset, GSuint size, GSuint flags)
+void xGSImpl::CopyDataImpl(xGSObject *src, xGSObject *dst, GSuint readoffset, GSuint writeoffset, GSuint size, GSuint flags)
 {
-    if (!ValidateState(RENDERER_READY, true, false, false)) {
-        return GS_FALSE;
-    }
-
-    if (src == nullptr || dst == nullptr) {
-        return error(GSE_INVALIDOBJECT);
-    }
-
     if (!BindCopyObject(src, GL_COPY_READ_BUFFER)) {
-        return error(GSE_INVALIDOPERATION);
+        error(GSE_INVALIDOPERATION);
+        return;
     }
 
     if (!BindCopyObject(dst, GL_COPY_WRITE_BUFFER)) {
-        return error(GSE_INVALIDOPERATION);
+        error(GSE_INVALIDOPERATION);
+        return;
     }
 
     glCopyBufferSubData(
@@ -998,21 +622,11 @@ GSbool xGSImpl::CopyData(xGSObject *src, xGSObject *dst, GSuint readoffset, GSui
         readoffset, writeoffset, size
     );
 
-    return error(GS_OK);
+    p_error = GS_OK;
 }
 
-GSbool xGSImpl::BufferCommitment(xGSObject *buffer, GSuint offset, GSuint size, GSbool commit, GSuint flags)
+void xGSImpl::BufferCommitmentImpl(xGSObject *buffer, GSuint offset, GSuint size, GSbool commit, GSuint flags)
 {
-    if (!ValidateState(RENDERER_READY, true, false, false)) {
-        return GS_FALSE;
-    }
-
-    if (buffer == nullptr) {
-        return error(GSE_INVALIDOBJECT);
-    }
-
-    // TODO: check for support, check for buffer is sparse
-
     GSenum type = static_cast<xGSUnknownObjectImpl*>(buffer)->objecttype();
 
     GLuint objectid = 0;
@@ -1037,7 +651,8 @@ GSbool xGSImpl::BufferCommitment(xGSObject *buffer, GSuint offset, GSuint size, 
         case GS_OBJECTTYPE_TEXTURE: {
             xGSTextureImpl *impl = static_cast<xGSTextureImpl*>(buffer);
             if (impl->target() != GL_TEXTURE_BUFFER) {
-                return error(GSE_INVALIDOBJECT);
+                error(GSE_INVALIDOBJECT);
+                return;
             }
             objectid = impl->getID();
             target = GL_TEXTURE_BUFFER;
@@ -1045,97 +660,56 @@ GSbool xGSImpl::BufferCommitment(xGSObject *buffer, GSuint offset, GSuint size, 
         }
 
         default:
-            return error(GSE_INVALIDOBJECT);
+            error(GSE_INVALIDOBJECT);
+            return;
     }
 
     glBindBuffer(target, objectid);
     glBufferPageCommitmentARB(target, offset, size, commit);
 
-    return error(GS_OK);
+    p_error = GS_OK;
 }
 
-GSbool xGSImpl::GeometryBufferCommitment(IxGSGeometryBuffer buffer, IxGSGeometry *geometries, GSuint count, GSbool commit)
+void xGSImpl::GeometryBufferCommitmentImpl(xGSGeometryBufferImpl *buffer)
 {
-    if (!ValidateState(RENDERER_READY, true, false, false)) {
-        return GS_FALSE;
-    }
-
-    if (buffer == nullptr) {
-        return error(GSE_INVALIDOBJECT);
-    }
-
-    xGSGeometryBufferImpl *impl = static_cast<xGSGeometryBufferImpl*>(buffer);
-
-    GSuint vertexsize = impl->vertexDecl().buffer_size();
-    GSuint indexsize = index_buffer_size(impl->indexFormat());
-
     // TODO: this breaks current input binding, resolve it
-    glBindBuffer(GL_ARRAY_BUFFER, impl->getVertexBufferID());
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, impl->getIndexBufferID());
-
-    for (GSuint n = 0; n < count; ++n) {
-        xGSGeometryImpl *geom = static_cast<xGSGeometryImpl*>(*geometries++);
-
-        if (geom->buffer() != impl) {
-            // skip
-            // TODO: think about skipping or error...
-            continue;
-        }
-
-        glBufferPageCommitmentARB(
-            GL_ARRAY_BUFFER, GLintptr(geom->vertexPtr()),
-            geom->vertexCount() * vertexsize, commit
-        );
-
-        if (geom->indexCount() == 0) {
-            continue;
-        }
-
-        glBufferPageCommitmentARB(
-            GL_ELEMENT_ARRAY_BUFFER, GLintptr(geom->indexPtr()),
-            geom->indexCount() * indexsize, commit
-        );
-    }
-
-    return error(GS_OK);
+    glBindBuffer(GL_ARRAY_BUFFER, buffer->getVertexBufferID());
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer->getIndexBufferID());
 }
 
-GSbool xGSImpl::TextureCommitment(IxGSTexture texture, GSuint level, GSuint x, GSuint y, GSuint z, GSuint width, GSuint height, GSuint depth, GSbool commit)
+void xGSImpl::GeometryBufferCommitmentGeometry(xGSGeometryImpl *geometry, GSuint vertexsize, GSuint indexsize, GSbool commit)
 {
-    if (!ValidateState(RENDERER_READY, true, false, false)) {
-        return GS_FALSE;
+    glBufferPageCommitmentARB(
+        GL_ARRAY_BUFFER, GLintptr(geometry->vertexPtr()),
+        geometry->vertexCount() * vertexsize, commit
+    );
+
+    if (geometry->indexCount() == 0) {
+        return;
     }
 
-    if (texture == nullptr) {
-        return error(GSE_INVALIDOBJECT);
-    }
+    glBufferPageCommitmentARB(
+        GL_ELEMENT_ARRAY_BUFFER, GLintptr(geometry->indexPtr()),
+        geometry->indexCount() * indexsize, commit
+    );
+}
 
-    xGSTextureImpl *tex = static_cast<xGSTextureImpl*>(texture);
-
-    if (tex->target() == GL_TEXTURE_BUFFER) {
-        return error(GSE_INVALIDOBJECT);
+void xGSImpl::TextureCommitmentImpl(xGSTextureImpl *texture, GSuint level, GSuint x, GSuint y, GSuint z, GSuint width, GSuint height, GSuint depth, GSbool commit)
+{
+    if (texture->target() == GL_TEXTURE_BUFFER) {
+        error(GSE_INVALIDOBJECT);
+        return;
     }
 
     // TODO: this breaks state, resolve
-    glBindTexture(tex->target(), tex->getID());
-    glTexPageCommitmentARB(tex->target(), level, x, y, z, width, height, depth, commit);
+    glBindTexture(texture->target(), texture->getID());
+    glTexPageCommitmentARB(texture->target(), level, x, y, z, width, height, depth, commit);
 
-    return error(GS_OK);
+    p_error = GS_OK;
 }
 
-GSbool xGSImpl::Compute(IxGSComputeState state, GSuint x, GSuint y, GSuint z)
+void xGSImpl::BeginTimerQueryImpl()
 {
-    // TODO:
-
-    return GS_FALSE;
-}
-
-GSbool xGSImpl::BeginTimerQuery()
-{
-    if (!ValidateState(RENDERER_READY, false, true, false)) {
-        return GS_FALSE;
-    }
-
     if (p_timerqueries[p_timerindex] == 0) {
         glGenQueries(1, &p_timerqueries[p_timerindex]);
     }
@@ -1147,32 +721,23 @@ GSbool xGSImpl::BeginTimerQuery()
     if (p_timerindex > p_timerscount) {
         p_timerscount = p_timerindex;
     }
-
-    return GS_TRUE;
 }
 
-GSbool xGSImpl::EndTimerQuery()
+void xGSImpl::EndTimerQueryImpl()
 {
-    if (!ValidateState(RENDERER_READY, false, true, false)) {
-        return GS_FALSE;
-    }
-
     if (p_opentimerqueries == 0) {
-        return error(GSE_INVALIDOPERATION);
+        error(GSE_INVALIDOPERATION);
+        return;
     }
 
     --p_opentimerqueries;
     glEndQuery(GL_TIME_ELAPSED);
 
-    return GS_TRUE;
+    p_error = GS_OK;
 }
 
-GSbool xGSAPI xGSImpl::TimstampQuery()
+void xGSImpl::TimestampQueryImpl()
 {
-    if (!ValidateState(RENDERER_READY, false, true, false)) {
-        return GS_FALSE;
-    }
-
     // TODO: remove copypasta
 
     if (p_timerqueries[p_timerindex] == 0) {
@@ -1185,18 +750,13 @@ GSbool xGSAPI xGSImpl::TimstampQuery()
     if (p_timerindex > p_timerscount) {
         p_timerscount = p_timerindex;
     }
-
-    return GS_TRUE;
 }
 
-GSbool xGSImpl::GatherTimers(GSuint flags, GSuint64 *values, GSuint count)
+void xGSImpl::GatherTimersImpl(GSuint flags, GSuint64 *values, GSuint count)
 {
-    if (!ValidateState(RENDERER_READY, false, true, false)) {
-        return GS_FALSE;
-    }
-
     if (p_timerindex == 0) {
-        return error(GSE_INVALIDOPERATION);
+        error(GSE_INVALIDOPERATION);
+        return;
     }
 
     if (count >= p_timerindex) {
@@ -1209,7 +769,9 @@ GSbool xGSImpl::GatherTimers(GSuint flags, GSuint64 *values, GSuint count)
         } else {
             glGetQueryObjectiv(p_timerqueries[p_timerindex - 1], GL_QUERY_RESULT_AVAILABLE, &available);
             if (!available) {
-                return GS_FALSE;
+                // TODO: fix error code for not available query
+                p_error = GSE_INVALIDOPERATION;
+                return;
             }
         }
 
@@ -1221,19 +783,7 @@ GSbool xGSImpl::GatherTimers(GSuint flags, GSuint64 *values, GSuint count)
 
     p_timerindex = 0;
 
-    return GS_TRUE;
-}
-
-
-
-IxGS xGSImpl::create()
-{
-    if (!gs) {
-        gs = new xGSImpl();
-    }
-
-    gs->AddRef();
-    return gs;
+    p_error = GS_OK;
 }
 
 
@@ -1263,11 +813,6 @@ void xGSImpl::AddTextureFormatDescriptor(GSvalue format, GSint _bpp, GLenum _int
     ));
 }
 
-void xGSImpl::RenderTargetSize(GSsize &size)
-{
-    size = p_rendertarget ? p_rendertarget->size() : p_context->RenderTargetSize();
-}
-
 void xGSImpl::DefaultRTFormats()
 {
     // TODO: fill in current RT formats with default RT formats
@@ -1279,24 +824,4 @@ void xGSImpl::DefaultRTFormats()
 
     p_colorformats[0] = ColorFormatFromPixelFormat(fmt);
     p_depthstencilformat = DepthFormatFromPixelFormat(fmt);
-}
-
-void xGSImpl::DrawImmediatePrimitives(xGSGeometryBufferImpl *buffer)
-{
-    // TODO: think about MultiDraw implementation for this
-
-    for (size_t n = 0; n < buffer->immediateCount(); ++n) {
-        const xGSGeometryBufferImpl::Primitive &p = buffer->immediatePrimitive(n);
-
-        if (p.indexcount == 0) {
-            glDrawArrays(p.type, p.firstvertex, p.vertexcount);
-        } else {
-            glDrawElementsBaseVertex(
-                p.type,
-                p.indexcount, gl_index_type(buffer->indexFormat()),
-                reinterpret_cast<GSptr>(index_buffer_size(buffer->indexFormat(), p.firstindex)),
-                p.firstvertex
-            );
-        }
-    }
 }

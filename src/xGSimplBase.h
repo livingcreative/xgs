@@ -69,59 +69,6 @@ namespace xGS
             CAPTURE
         };
 
-        GSbool ValidateState(SystemState requiredstate, bool exactmatch, bool matchimmediate, bool requiredimmediate);
-
-        template <typename T>
-        inline void CheckObjectList(const T &list, const std::string &listname);
-
-        template <typename T>
-        inline void ReleaseObjectList(T &list, const std::string &listname);
-
-        template <typename T, typename C>
-        void AttachObject(const C &caps, T &attachpoint, T object)
-        {
-            if (attachpoint) {
-                attachpoint->Release();
-            }
-
-            attachpoint = object;
-
-            if (attachpoint) {
-                attachpoint->AddRef();
-                attachpoint->apply(caps);
-            }
-        }
-
-        // NOTE: State and draw commands not implemented here even if they are
-        //          common for any implementation, they will be moved into
-        //          rendering list soon
-
-        void CleanupObjects();
-
-        // TODO: this needs to be moved in common IxGS interface implementation
-        template <typename C>
-        void SetState(const C &caps, xGSStateImpl *state)
-        {
-            AttachObject(caps, p_state, state);
-            AttachObject(caps, p_input, static_cast<xGSInputImpl*>(nullptr));
-            for (size_t n = 0; n < GS_MAX_PARAMETER_SETS; ++n) {
-                AttachObject(caps, p_parameters[n], static_cast<xGSParametersImpl*>(nullptr));
-            }
-#ifdef _DEBUG
-            if (!p_state) {
-                xGSStateImpl::bindNullProgram();
-            }
-#endif
-        }
-
-        // TODO: this needs to be moved in common IxGS interface implementation
-        //       and in render list eventually
-        template <typename T>
-        GSbool Draw(IxGSGeometry geometry_to_draw, const T &drawer);
-        template <typename T>
-        GSbool MultiDraw(IxGSGeometry *geometries_to_draw, GSuint count, const T &drawer);
-
-    protected:
         typedef std::unordered_set<xGSGeometryImpl*>       GeometryList;
         typedef std::unordered_set<xGSGeometryBufferImpl*> GeometryBufferList;
         typedef std::unordered_set<xGSDataBufferImpl*>     DataBufferList;
@@ -133,8 +80,8 @@ namespace xGS
 
         static IxGS            gs;
 
-        GSerror                p_error;
         SystemState            p_systemstate;
+        GSerror                p_error;
 
         GeometryList           p_geometrylist;
         GeometryBufferList     p_geometrybufferlist;
