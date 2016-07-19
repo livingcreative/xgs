@@ -32,7 +32,7 @@ namespace xGS
     class xGSImpl : public xGSImplBase
     {
     public:
-        xGSImpl(xGScontext *context);
+        xGSImpl();
         ~xGSImpl() override;
 
     public:
@@ -105,7 +105,7 @@ namespace xGS
         GSbool xGSAPI GatherTimers(GSuint flags, GSuint64 *values, GSuint count) override;
 
     public:
-        static IxGS create(xGScontextCreator *contextcreator);
+        static IxGS create();
 
         struct TextureFormatDescriptor
         {

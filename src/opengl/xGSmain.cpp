@@ -37,7 +37,6 @@ using namespace xGS;
 
 GSbool Create(IxGS *xgs)
 {
-    xGScontextCreatorPlatform cc;
-    *xgs = xGSImpl::create(&cc);
+    *xgs = xGSImpl::create();
     return *xgs != nullptr;
 }

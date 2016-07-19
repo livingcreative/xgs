@@ -8,31 +8,33 @@
     https://github.com/livingcreative/xgs
 
     opengl/win/xGScontextplatform.h
-        xGScontextWGL - Windows OpenGL context implementation
+        xGScontext - Windows OpenGL WGL context implementation
 */
 
 #pragma once
 
 #include "xGScontext.h"
-#include "xGSdefaultcontext.h"
 
 
 namespace xGS
 {
 
-    class xGScontextWGL : public xGScontext
+    class xGSdefaultcontext;
+
+
+    class xGScontext : public xGScontextBase
     {
     public:
-        xGScontextWGL();
-        ~xGScontextWGL() override;
+        xGScontext();
+        ~xGScontext();
 
-        GSerror Initialize() override;
-        GSerror CreateRenderer(const GSrendererdescription &desc) override;
-        GSbool DestroyRenderer() override;
+        GSerror Initialize();
+        GSerror CreateRenderer(const GSrendererdescription &desc);
+        GSbool DestroyRenderer();
 
-        GSbool Display() override;
+        GSbool Display();
 
-        GSsize RenderTargetSize() const override;
+        GSsize RenderTargetSize() const;
 
     private:
         void setBitsSupport(GSuint &bitflags, int bits)
@@ -66,16 +68,6 @@ namespace xGS
         HWND                  p_renderwidget;
         HDC                   p_renderdevice;
         HGLRC                 p_context;
-    };
-
-
-    class xGScontextCreatorPlatform : public xGScontextCreator
-    {
-    public:
-        xGScontext* create() override
-        {
-            return new xGScontextWGL();
-        }
     };
 
 } // namespace xGS

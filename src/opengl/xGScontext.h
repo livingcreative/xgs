@@ -22,10 +22,14 @@
 namespace xGS
 {
 
-    class xGScontext
+    // this is base class for context, it has common data for any
+    // OpenGL windowing subsystem
+    // Every specific subsystem implementation (WGL, GLX etc.) should
+    // derive its own xGScontext class from this one
+    class xGScontextBase
     {
     public:
-        xGScontext() :
+        xGScontextBase() :
             p_pixelformatlist(),
             p_colorbitssupport(0),
             p_depthbitssupport(0),
@@ -37,13 +41,24 @@ namespace xGS
             ResetRTFormat();
         }
 
-        virtual ~xGScontext() {}
+        /*
 
-        virtual GSerror Initialize() = 0;
-        virtual GSerror CreateRenderer(const GSrendererdescription &desc) = 0;
-        virtual GSbool DestroyRenderer() = 0;
+        OpenGL implementation expects to see these interface
+        in xGScontext class
 
-        virtual GSbool Display() = 0;
+        These functions not declared as virtual here because there's no need
+        for them to be virtual, they are "constant" for any specific implementation
+        and won't be changed at runtime.
+
+        C++ and its OOP is poor for defining this kind of must have interface for
+        a class, so this comment here left as a hint
+
+        GSerror Initialize();
+        GSerror CreateRenderer(const GSrendererdescription &desc);
+        GSbool DestroyRenderer();
+        GSbool Display();
+        GSsize RenderTargetSize() const;
+        */
 
         GSuint ColorBitsSupport() const { return p_colorbitssupport; }
         GSuint DepthBitsSupport() const { return p_depthbitssupport; }
@@ -52,7 +67,6 @@ namespace xGS
         GSbool sRGBSupport() const { return p_srgb; }
 
         const GSpixelformat& RenderTargetFormat() const { return p_rtformat; }
-        virtual GSsize RenderTargetSize() const = 0;
 
     protected:
         void ResetRTFormat()
@@ -70,13 +84,6 @@ namespace xGS
         GSint                       p_multisamplemax;
         GSbool                      p_srgb;
         GSpixelformat               p_rtformat;
-    };
-
-
-    class xGScontextCreator
-    {
-    public:
-        virtual xGScontext* create() = 0;
     };
 
 } // namespace xGS

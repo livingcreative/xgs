@@ -8,27 +8,28 @@
     https://github.com/livingcreative/xgs
 
     opengl/mac/xGScontextplatform.cpp
-        xGScontextOSX class implementation
+        xGScontext class implementation
 */
 
 #include "xGScontextplatform.h"
+#include "contextwrapper.h"
 
 
-xGScontextOSX::xGScontextOSX() :
+xGScontext::xGScontext() :
     p_context(nullptr)
 {}
 
-xGScontextOSX::~xGScontextOSX()
+xGScontext::~xGScontext()
 {
     CleanUp();
 }
 
-GSerror xGScontextOSX::Initialize()
+GSerror xGScontext::Initialize()
 {
     return GS_OK;
 }
 
-GSerror xGScontextOSX::CreateRenderer(const GSrendererdescription &desc)
+GSerror xGScontext::CreateRenderer(const GSrendererdescription &desc)
 {
     p_context = cw_create(reinterpret_cast<NSWidget*>(desc.widget));
 
@@ -39,19 +40,19 @@ GSerror xGScontextOSX::CreateRenderer(const GSrendererdescription &desc)
     return GS_OK;
 }
 
-GSbool xGScontextOSX::DestroyRenderer()
+GSbool xGScontext::DestroyRenderer()
 {
     CleanUp();
     return GS_TRUE;
 }
 
-GSbool xGScontextOSX::Display()
+GSbool xGScontext::Display()
 {
     cw_display(p_context);
     return GS_TRUE;
 }
 
-GSsize xGScontextOSX::RenderTargetSize() const
+GSsize xGScontext::RenderTargetSize() const
 {
     int width, height;
     cw_getsize(p_context, &width, &height);
@@ -63,7 +64,7 @@ GSsize xGScontextOSX::RenderTargetSize() const
     return result;
 }
 
-void xGScontextOSX::CleanUp()
+void xGScontext::CleanUp()
 {
     if (p_context) {
         cw_destroy(p_context);

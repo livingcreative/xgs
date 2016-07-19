@@ -115,7 +115,7 @@ namespace xGS
         }
 
         // TODO: this needs to be moved in common IxGS interface implementation
-        //       and in render list ventually
+        //       and in render list eventually
         template <typename T>
         GSbool Draw(IxGSGeometry geometry_to_draw, const T &drawer);
         template <typename T>

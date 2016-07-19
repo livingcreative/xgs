@@ -8,29 +8,33 @@
     https://github.com/livingcreative/xgs
 
     opengl/mac/xGScontextplatform.h
-        xGScontextOSX class - Mac OS X OpenGL context implementation
+        xGScontext class - Mac OS X OpenGL context implementation
 */
 
 #pragma once
 
-#include "../xGScontext.h"
-#include "contextwrapper.h"
+#include "xGScontext.h"
 
-namespace xGS {
 
-    class xGScontextOSX : public xGScontext
+namespace xGS
+{
+
+    struct NSContextObject;
+
+
+    class xGScontext : public xGScontextBase
     {
     public:
-        xGScontextOSX();
-        ~xGScontextOSX() override;
+        xGScontext();
+        ~xGScontext();
 
-        GSerror Initialize() override;
-        GSerror CreateRenderer(const GSrendererdescription &desc) override;
-        GSbool DestroyRenderer() override;
+        GSerror Initialize();
+        GSerror CreateRenderer(const GSrendererdescription &desc);
+        GSbool DestroyRenderer();
 
-        GSbool Display() override;
+        GSbool Display();
 
-        GSsize RenderTargetSize() const override;
+        GSsize RenderTargetSize() const;
 
     private:
         void setBitsSupport(GSuint &bitflags, int bits)
@@ -53,14 +57,4 @@ namespace xGS {
         NSContextObject *p_context;
     };
 
-
-    class xGScontextCreatorPlatform : public xGScontextCreator
-    {
-    public:
-        xGScontext* create() override
-        {
-            return new xGScontextOSX();
-        }
-    };
-    
 } // namespace xGS

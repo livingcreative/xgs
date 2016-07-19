@@ -8,7 +8,7 @@
     https://github.com/livingcreative/xgs
 
     opengl/win/xGScontextplatform.cpp
-        xGScontextWGL class implementation
+        xGScontext class implementation
 */
 
 #include "xGScontextplatform.h"
@@ -19,25 +19,25 @@
 using namespace xGS;
 
 
-xGScontextWGL::xGScontextWGL() :
-    xGScontext(),
+xGScontext::xGScontext() :
+    xGScontextBase(),
     p_pixelformatWGL(false),
     p_multisample(false),
     p_context(0)
 {
 #ifdef _DEBUG
-    OutputDebugStringA("contextWGL created\n");
+    OutputDebugStringA("context WGL created\n");
 #endif
 }
 
-xGScontextWGL::~xGScontextWGL()
+xGScontext::~xGScontext()
 {
 #ifdef _DEBUG
-    OutputDebugStringA("contextWGL destroyed\n");
+    OutputDebugStringA("context WGL destroyed\n");
 #endif
 }
 
-GSerror xGScontextWGL::Initialize()
+GSerror xGScontext::Initialize()
 {
     // default context
     xGSdefaultcontext dc;
@@ -129,7 +129,7 @@ static int stencil_bits(GSenum format)
     return 0;
 }
 
-GSerror xGScontextWGL::CreateRenderer(const GSrendererdescription &desc)
+GSerror xGScontext::CreateRenderer(const GSrendererdescription &desc)
 {
     if (p_pixelformatWGL) {
         xGSdefaultcontext dc;
@@ -308,21 +308,21 @@ GSerror xGScontextWGL::CreateRenderer(const GSrendererdescription &desc)
     return GS_OK;
 }
 
-GSbool xGScontextWGL::DestroyRenderer()
+GSbool xGScontext::DestroyRenderer()
 {
     CleanUp();
     ResetRTFormat();
     return GS_TRUE;
 }
 
-GSbool xGScontextWGL::Display()
+GSbool xGScontext::Display()
 {
     //if (wglSwapIntervalEXT)
     //    wglSwapIntervalEXT(0);
     return SwapBuffers(p_renderdevice) == TRUE;
 }
 
-GSsize xGScontextWGL::RenderTargetSize() const
+GSsize xGScontext::RenderTargetSize() const
 {
     RECT rc;
     rc.right = 0;
@@ -352,7 +352,7 @@ enum AttributeIndex
     ATTR_COUNT
 };
 
-GSbool xGScontextWGL::EnumWGLPixelFormats(xGSdefaultcontext &dc)
+GSbool xGScontext::EnumWGLPixelFormats(xGSdefaultcontext &dc)
 {
     if (p_pixelformatWGL) {
         GLint attr = WGL_NUMBER_PIXEL_FORMATS_ARB;
@@ -430,7 +430,7 @@ GSbool xGScontextWGL::EnumWGLPixelFormats(xGSdefaultcontext &dc)
     return true;
 }
 
-GSbool xGScontextWGL::EnumDefaultPixelFormats(xGSdefaultcontext &dc)
+GSbool xGScontext::EnumDefaultPixelFormats(xGSdefaultcontext &dc)
 {
     if (p_pixelformatlist.size() == 0) {
         int n = 1;
@@ -465,7 +465,7 @@ GSbool xGScontextWGL::EnumDefaultPixelFormats(xGSdefaultcontext &dc)
     return true;
 }
 
-HGLRC xGScontextWGL::CreateContext(HDC device)
+HGLRC xGScontext::CreateContext(HDC device)
 {
     if (wglCreateContextAttribsARB) {
         GLint attribs[9] = {
@@ -490,7 +490,7 @@ HGLRC xGScontextWGL::CreateContext(HDC device)
     }
 }
 
-void xGScontextWGL::CleanUp()
+void xGScontext::CleanUp()
 {
     if (p_context) {
         wglMakeCurrent(0, 0);

@@ -12,7 +12,7 @@
 */
 
 #include "xGSimpl.h"
-#include "xGScontext.h"
+#include "xGScontextplatform.h"
 #include "xGSgeometry.h"
 #include "xGSgeometrybuffer.h"
 #include "xGSdatabuffer.h"
@@ -51,11 +51,11 @@ void CALLBACK errorCallback(GLenum source, GLenum type, GLuint id, GLenum severi
 }
 #endif
 
-xGSImpl::xGSImpl(xGScontext *context) :
+xGSImpl::xGSImpl() :
     xGSImplBase(),
-    p_context(context)
+    p_context(new xGScontext())
 {
-    p_error = context->Initialize();
+    p_error = p_context->Initialize();
     if (p_error != GS_OK) {
         return;
     }
@@ -186,13 +186,6 @@ GSbool xGSImpl::CreateRenderer(const GSrendererdescription &desc)
 
     glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &p_caps.max_active_attribs);
     glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &p_caps.max_texture_units);
-    //p_caps.multi_bind = false;//GLEW_ARB_multi_bind != 0;
-    //p_caps.multi_blend = true;//GLEW_ARB_draw_buffers_blend != 0;
-    //p_caps.vertex_format = false;//GLEW_ARB_vertex_attrib_binding != 0;
-    //p_caps.texture_srgb = true;//GLEW_EXT_texture_sRGB != 0;
-    //p_caps.texture_float = true;//GLEW_ARB_texture_float != 0;
-    //p_caps.texture_depth = true;//GLEW_ARB_depth_texture != 0;
-    //p_caps.texture_depthstencil = true;//GLEW_EXT_packed_depth_stencil != 0;
     // TODO: review caps (some are static, not run-time)
     p_caps.multi_bind           = GS_CAPS_MULTI_BIND;
     p_caps.multi_blend          = GS_CAPS_MULTI_BLEND;
@@ -1233,10 +1226,10 @@ GSbool xGSImpl::GatherTimers(GSuint flags, GSuint64 *values, GSuint count)
 
 
 
-IxGS xGSImpl::create(xGScontextCreator *contextcreator)
+IxGS xGSImpl::create()
 {
     if (!gs) {
-        gs = new xGSImpl(contextcreator->create());
+        gs = new xGSImpl();
     }
 
     gs->AddRef();
