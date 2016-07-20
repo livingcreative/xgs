@@ -22,6 +22,7 @@
 #include "xGSparameters.cpp"
 #include "xGSstate.cpp"
 #include "xGSinput.cpp"
+#include "xGSgeometrybufferbase.cpp"
 #include "xGSgeometrybuffer.cpp"
 #include "xGSgeometry.cpp"
 #include "xGSframebuffer.cpp"

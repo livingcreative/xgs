@@ -552,10 +552,10 @@ void xGSImpl::DrawImmediatePrimitives(xGSGeometryBufferImpl *buffer)
         const xGSGeometryBufferImpl::Primitive &p = buffer->immediatePrimitive(n);
 
         if (p.indexcount == 0) {
-            glDrawArrays(p.type, p.firstvertex, p.vertexcount);
+            glDrawArrays(gl_primitive_type(p.type), p.firstvertex, p.vertexcount);
         } else {
             glDrawElementsBaseVertex(
-                p.type,
+                gl_primitive_type(p.type),
                 p.indexcount, gl_index_type(buffer->indexFormat()),
                 reinterpret_cast<GSptr>(index_buffer_size(buffer->indexFormat(), p.firstindex)),
                 p.firstvertex

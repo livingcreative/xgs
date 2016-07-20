@@ -66,9 +66,6 @@ GSbool xGSInputImpl::allocate(const GSinputdescription &desc)
         }
 
         xGSGeometryBufferImpl *buffer = static_cast<xGSGeometryBufferImpl*>(binding->buffer);
-        if (!buffer->allocated()) {
-            return p_owner->error(GSE_INVALIDOBJECT);
-        }
 
         // TODO: check layout match
 

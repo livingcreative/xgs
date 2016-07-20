@@ -81,10 +81,6 @@ GSbool xGSStateImpl::allocate(const GSstatedescription &desc)
 
                 xGSGeometryBufferImpl *buffer =
                     static_cast<xGSGeometryBufferImpl*>(inputlayout->buffer);
-                if (!buffer->allocated()) {
-                    ReleaseRendererResources();
-                    return p_owner->error(GSE_INVALIDOBJECT);
-                }
 
                 slot.buffer = buffer;
                 buffer->AddRef();
