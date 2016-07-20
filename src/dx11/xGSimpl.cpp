@@ -109,6 +109,9 @@ void xGSImpl::CreateRendererImpl(const GSrendererdescription &desc)
 void xGSImpl::DestroyRendererImpl()
 {
     // TODO: xGSImpl::DestroyRendererImpl
+    for (auto &sampler : p_samplerlist) {
+        ::Release(sampler.sampler);
+    }
     ::Release(p_defaultrt);
     ::Release(p_defaultrtds);
     ::Release(p_swapchain);
@@ -118,7 +121,50 @@ void xGSImpl::DestroyRendererImpl()
 
 void xGSImpl::CreateSamplersImpl(const GSsamplerdescription *samplers, GSuint count)
 {
-    // TODO: xGSImpl::CreateSamplersImpl
+    for (auto &s : p_samplerlist) {
+        s.sampler->Release();
+    }
+
+    p_samplerlist.resize(count);
+    for (size_t n = 0; n < count; ++n) {
+        Sampler &s = p_samplerlist[n];
+
+        // TODO: check values
+
+        D3D11_SAMPLER_DESC desc = {};
+
+        switch (samplers->filter) {
+            case GS_FILTER_NEAREST:
+                desc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+                break;
+
+            case GS_FILTER_LINEAR:
+                // TODO: linear filter without mips?
+                desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+                break;
+
+            case GS_FILTER_TRILINEAR:
+                desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+                break;
+        }
+
+        desc.AddressU = dx11_texture_wrap(samplers->wrapu);
+        desc.AddressV = dx11_texture_wrap(samplers->wrapv);
+        desc.AddressW = dx11_texture_wrap(samplers->wrapw);
+
+        desc.MinLOD = float(samplers->minlod);
+        desc.MaxLOD = float(samplers->maxlod);
+        desc.MipLODBias = samplers->bias;
+
+        if (samplers->depthcompare) {
+            // TODO: should this mode affect filter?
+            desc.ComparisonFunc = dx11_compare_func(samplers->depthcompare);
+        }
+
+        p_device->CreateSamplerState(&desc, &s.sampler);
+
+        ++samplers;
+    }
 
     p_error = GS_OK;
 }

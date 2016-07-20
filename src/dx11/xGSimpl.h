@@ -27,6 +27,7 @@ struct ID3D11Device;
 struct ID3D11DeviceContext;
 struct ID3D11RenderTargetView;
 struct ID3D11DepthStencilView;
+struct ID3D11SamplerState;
 
 
 namespace xGS
@@ -38,6 +39,9 @@ namespace xGS
         xGSImpl();
 
     public:
+        ID3D11Device* device() const { return p_device; }
+        ID3D11DeviceContext* context() const { return p_context; }
+
         // cpas
         const GScaps& caps() const { return p_caps; }
 
@@ -126,6 +130,7 @@ namespace xGS
     protected:
         struct Sampler
         {
+            ID3D11SamplerState *sampler;
             GSuint refcount;
         };
 

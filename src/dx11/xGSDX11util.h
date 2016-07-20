@@ -14,6 +14,7 @@
 #pragma once
 
 #include "xGS/xGS.h"
+#include <d3d11.h>
 #include <vector>
 
 
@@ -61,30 +62,30 @@ namespace xGS
         return 0;
     }
 
-    inline int dx11_texture_wrap(GSenum wrap)
+    inline D3D11_TEXTURE_ADDRESS_MODE dx11_texture_wrap(GSenum wrap)
     {
         switch (wrap) {
-            case GS_WRAP_CLAMP:  return 0;
-            case GS_WRAP_REPEAT: return 0;
+            case GS_WRAP_CLAMP:  return D3D11_TEXTURE_ADDRESS_CLAMP;
+            case GS_WRAP_REPEAT: return D3D11_TEXTURE_ADDRESS_WRAP;
         }
 
-        return 0;
+        return D3D11_TEXTURE_ADDRESS_MODE(0);
     }
 
-    inline int dx11_compare_func(GSenum func)
+    inline D3D11_COMPARISON_FUNC dx11_compare_func(GSenum func)
     {
         switch (func) {
-            case GS_DEPTHTEST_NEVER:    return 0;
-            case GS_DEPTHTEST_LESS:     return 0;
-            case GS_DEPTHTEST_LEQUAL:   return 0;
-            case GS_DEPTHTEST_EQUAL:    return 0;
-            case GS_DEPTHTEST_NOTEQUAL: return 0;
-            case GS_DEPTHTEST_GREATER:  return 0;
-            case GS_DEPTHTEST_GEQUAL:   return 0;
-            case GS_DEPTHTEST_ALWAYS:   return 0;
+            case GS_DEPTHTEST_NEVER:    return D3D11_COMPARISON_NEVER;
+            case GS_DEPTHTEST_LESS:     return D3D11_COMPARISON_LESS;
+            case GS_DEPTHTEST_LEQUAL:   return D3D11_COMPARISON_LESS_EQUAL;
+            case GS_DEPTHTEST_EQUAL:    return D3D11_COMPARISON_EQUAL;
+            case GS_DEPTHTEST_NOTEQUAL: return D3D11_COMPARISON_NOT_EQUAL;
+            case GS_DEPTHTEST_GREATER:  return D3D11_COMPARISON_GREATER;
+            case GS_DEPTHTEST_GEQUAL:   return D3D11_COMPARISON_GREATER_EQUAL;
+            case GS_DEPTHTEST_ALWAYS:   return D3D11_COMPARISON_ALWAYS;
         }
 
-        return 0;
+        return D3D11_COMPARISON_FUNC(0);
     }
 
     inline int dx11_fill_mode(GSenum mode)

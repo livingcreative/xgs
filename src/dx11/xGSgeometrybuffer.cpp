@@ -14,6 +14,7 @@
 #include "xGSgeometrybuffer.h"
 #include "xGSutil.h"
 #include "kcommon/c_util.h"
+#include <d3d11.h>
 
 
 using namespace xGS;
@@ -48,7 +49,22 @@ GSbool xGSGeometryBufferImpl::allocate(const GSgeometrybufferdescription &desc)
     p_vertexcount = desc.vertexcount;
     p_indexcount = p_indexformat != GS_INDEX_NONE ? desc.indexcount : 0;
 
-    // TODO: xGSGeometryBufferImpl::allocate
+    // TODO: geometry buffers usage
+    D3D11_BUFFER_DESC vertexbufferdesc = {};
+    vertexbufferdesc.Usage = D3D11_USAGE_DEFAULT;
+    vertexbufferdesc.ByteWidth = p_vertexdecl.buffer_size(p_vertexcount);
+    vertexbufferdesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+    vertexbufferdesc.CPUAccessFlags = 0;//D3D11_CPU_ACCESS_WRITE;
+
+    p_owner->device()->CreateBuffer(&vertexbufferdesc, nullptr, &p_vertexbuffer);
+
+    D3D11_BUFFER_DESC indexbufferdesc = {};
+    indexbufferdesc.Usage = D3D11_USAGE_DEFAULT;
+    indexbufferdesc.ByteWidth = index_buffer_size(p_indexformat, p_indexcount);
+    indexbufferdesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+    indexbufferdesc.CPUAccessFlags = 0;//D3D11_CPU_ACCESS_WRITE;
+
+    p_owner->device()->CreateBuffer(&indexbufferdesc, nullptr, &p_indexbuffer);
 
     return p_owner->error(GS_OK);
 }
@@ -74,8 +90,8 @@ GSptr xGSGeometryBufferImpl::Lock(GSenum locktype, GSdword access, void *lockdat
     return lock(
         locktype, 0,
         locktype == GS_LOCK_VERTEXDATA ?
-          p_vertexdecl.buffer_size(p_vertexcount) :
-          index_buffer_size(p_indexformat, p_indexcount)
+            p_vertexdecl.buffer_size(p_vertexcount) :
+            index_buffer_size(p_indexformat, p_indexcount)
      );
 }
 
@@ -97,12 +113,29 @@ GSptr xGSGeometryBufferImpl::lock(GSenum locktype, size_t offset, size_t size)
 
     // TODO: xGSGeometryBufferImpl::lock
 
-    return nullptr;
+    p_lockmemory = new char[size];
+    p_lockoffset = offset;
+    p_locksize = size;
+    return p_lockmemory;
 }
 
 void xGSGeometryBufferImpl::unlock()
 {
-    // TODO: xGSGeometryBufferImpl::unlock
+    D3D11_BOX box = {};
+    box.left = p_lockoffset;
+    box.right = p_lockoffset + p_locksize;
+
+    switch (p_locktype) {
+        case GS_LOCK_VERTEXDATA:
+            p_owner->context()->UpdateSubresource(p_vertexbuffer, 0, &box, p_lockmemory, 0, 0);
+            break;
+
+        case GS_LOCK_INDEXDATA:
+            p_owner->context()->UpdateSubresource(p_indexbuffer, 0, &box, p_lockmemory, 0, 0);
+            break;
+    }
+
+    delete[] p_lockmemory;
 }
 
 void xGSGeometryBufferImpl::BeginImmediateDrawing()
@@ -132,5 +165,6 @@ void xGSGeometryBufferImpl::EndImmediateDrawing()
 
 void xGSGeometryBufferImpl::ReleaseRendererResources()
 {
-    // TODO: xGSGeometryBufferImpl::ReleaseRendererResources
+    ::Release(p_vertexbuffer);
+    ::Release(p_indexbuffer);
 }

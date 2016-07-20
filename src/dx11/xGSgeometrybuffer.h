@@ -19,6 +19,9 @@
 #include "xGSgeometrybufferbase.h"
 
 
+struct ID3D11Buffer;
+
+
 namespace xGS
 {
 
@@ -38,6 +41,9 @@ namespace xGS
     public:
         GSbool allocate(const GSgeometrybufferdescription &desc);
 
+        ID3D11Buffer* vertexbuffer() const { return p_vertexbuffer; }
+        ID3D11Buffer* indexbuffer() const { return p_indexbuffer; }
+
         GSptr lock(GSenum locktype, size_t offset, size_t size);
         void unlock();
 
@@ -47,7 +53,11 @@ namespace xGS
         void ReleaseRendererResources();
 
     private:
-
+        ID3D11Buffer *p_vertexbuffer;
+        ID3D11Buffer *p_indexbuffer;
+        char         *p_lockmemory;
+        size_t        p_lockoffset;
+        size_t        p_locksize;
     };
 
 } // namespace xGS
