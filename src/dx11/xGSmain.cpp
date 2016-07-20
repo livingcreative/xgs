@@ -26,7 +26,7 @@
 #include "xGSgeometrybuffer.cpp"
 #include "xGSgeometry.cpp"
 #include "xGSframebuffer.cpp"
-#include "xGSimplBase.cpp"
+#include "xGSimplbase.cpp"
 #include "xGSimpl.cpp"
 #include "IxGSimpl.cpp"
 
