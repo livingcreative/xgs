@@ -15,7 +15,7 @@
 #pragma once
 
 #include "xGS/xGS.h"
-#include "../xGSimplBase.h"
+#include "xGSimplbase.h"
 #include "xGSGLutil.h"
 #include <memory>
 #include <vector>
