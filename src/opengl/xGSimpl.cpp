@@ -438,6 +438,21 @@ void xGSImpl::SetUniformValueImpl(GSenum type, GSint location, const void *value
     }
 }
 
+void xGSImpl::SetupGeometryImpl(xGSGeometryImpl *geometry)
+{
+    // set up patch parameters
+    if (geometry->type() == GS_PRIM_PATCHES) {
+        glPatchParameteri(GL_PATCH_VERTICES, geometry->patchvertices());
+    }
+
+    // set up restart parameters
+    if (!geometry->restart()) {
+        glDisable(GL_PRIMITIVE_RESTART);
+    } else {
+        glEnable(GL_PRIMITIVE_RESTART);
+        glPrimitiveRestartIndex(geometry->restartindex());
+    }
+}
 
 struct SimpleDrawer
 {

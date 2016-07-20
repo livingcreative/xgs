@@ -17,7 +17,6 @@ set(HEADERS
 	opengl/xGScontext.h
 	opengl/xGSdatabuffer.h
 	opengl/xGSframebuffer.h
-	opengl/xGSgeometry.h
 	opengl/xGSgeometrybuffer.h
 	opengl/xGSGLutil.h
 	opengl/xGSimpl.h
@@ -34,7 +33,6 @@ set(SOURCES
 
 	# xGSdatabuffer.cpp
 	# xGSframebuffer.cpp
-	# xGSgeometry.cpp
 	# xGSgeometrybuffer.cpp
 	# xGSGLutil.cpp
 	# xGSimpl.cpp

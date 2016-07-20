@@ -39,5 +39,5 @@ set(SHAREDLIB_LIBS
 # Windows shared library source files
 set(SHARED_SOURCES
 	opengl/win/xGSOpenGL.cpp
-	opengl/win/xGSOpenGL.def
+	xGS.def
 )

@@ -730,7 +730,7 @@ GSbool IxGSImpl::Draw(IxGSGeometry geometry_to_draw, const T &drawer)
     }
 #endif
 
-    geometry->setup();
+    SetupGeometryImpl(geometry);
 
     if (geometry->indexFormat() == GS_INDEX_NONE) {
         drawer.DrawArrays(geometry->type(), geometry->baseVertex(), geometry->vertexCount());

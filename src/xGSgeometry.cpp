@@ -7,7 +7,7 @@
 
     https://github.com/livingcreative/xgs
 
-    opengl/xGSgeometry.cpp
+    xGSgeometry.cpp
         Geometry object implementation class
 */
 
@@ -225,22 +225,6 @@ GSbool xGSGeometryImpl::Unlock()
     doUnlock();
 
     return p_owner->error(GS_OK);
-}
-
-void xGSGeometryImpl::setup() const
-{
-    // set up patch parameters
-    if (p_type == GS_PRIM_PATCHES) {
-        glPatchParameteri(GL_PATCH_VERTICES, p_patch_vertices);
-    }
-
-    // set up restart parameters
-    if (!p_restart) {
-        glDisable(GL_PRIMITIVE_RESTART);
-    } else {
-        glEnable(GL_PRIMITIVE_RESTART);
-        glPrimitiveRestartIndex(p_restartindex);
-    }
 }
 
 bool xGSGeometryImpl::checkAlloc(GSenum indexformat)

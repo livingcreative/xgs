@@ -7,10 +7,12 @@
 
     https://github.com/livingcreative/xgs
 
-    opengl/xGSgeometry.h
+    xGSgeometry.h
         Geometry object implementation class header
             this object defines parameters of static chunk of geometry (mesh)
             primitive type, vertex and index count and source buffer
+
+            it is common for any implementation - xGS API object
 */
 
 #pragma once
@@ -40,6 +42,9 @@ namespace xGS
         GSbool allocate(const GSgeometrydescription &desc);
 
         GSenum                 type() const { return p_type; }
+        GSuint                 patchvertices() const { return p_patch_vertices; }
+        GSbool                 restart() const { return p_restart; }
+        GSuint                 restartindex() const { return p_restartindex; }
         GSenum                 indexFormat() const { return p_indexformat; }
         GSint                  vertexCount() const { return p_vertexcount; }
         GSint                  indexCount() const { return p_indexcount; }
@@ -48,8 +53,6 @@ namespace xGS
         const GSptr            indexPtr() const { return p_indexmemory; }
         xGSGeometryBufferImpl* buffer() const { return p_buffer; }
         GSuint                 baseVertex() const { return p_basevertex; }
-
-        void                   setup() const;
 
         void ReleaseRendererResources()
         {

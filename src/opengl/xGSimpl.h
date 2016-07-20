@@ -66,6 +66,8 @@ namespace xGS
         void SetBlendColorImpl(const GScolor &color);
         void SetUniformValueImpl(GSenum type, GSint location, const void *value);
 
+        void SetupGeometryImpl(xGSGeometryImpl *geometry);
+
         void BeginCaptureImpl(GSenum mode);
         void EndCaptureImpl(GSuint *elementcount);
 
