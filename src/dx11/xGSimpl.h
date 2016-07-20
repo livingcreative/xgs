@@ -26,6 +26,7 @@ struct IDXGISwapChain;
 struct ID3D11Device;
 struct ID3D11DeviceContext;
 struct ID3D11RenderTargetView;
+struct ID3D11DepthStencilView;
 
 
 namespace xGS
@@ -68,6 +69,8 @@ namespace xGS
         void SetStencilReferenceImpl(GSuint ref);
         void SetBlendColorImpl(const GScolor &color);
         void SetUniformValueImpl(GSenum type, GSint location, const void *value);
+
+        void SetupGeometryImpl(xGSGeometryImpl *geometry);
 
         void BeginCaptureImpl(GSenum mode);
         void EndCaptureImpl(GSuint *elementcount);
@@ -115,6 +118,9 @@ namespace xGS
         void AddTextureFormatDescriptor(GSvalue format);
         void RenderTargetSize(GSsize &size);
 
+        void CheckDefaultRTResize();
+        void RecreateDefaultRT();
+        void RecreateDefaultRTDepthStencil();
         void DefaultRTFormats();
 
     protected:
@@ -134,7 +140,12 @@ namespace xGS
         IDXGISwapChain         *p_swapchain;
         ID3D11Device           *p_device;
         ID3D11DeviceContext    *p_context;
+        GSwidget                p_widget;
+        bool                    p_checkresize;
+        int                     p_defaultrtwidth;
+        int                     p_defaultrtheight;
         ID3D11RenderTargetView *p_defaultrt;
+        ID3D11DepthStencilView *p_defaultrtds;
 
         TextureDescriptorsMap   p_texturedescs;
 

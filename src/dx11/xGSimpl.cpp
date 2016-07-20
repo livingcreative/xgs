@@ -33,7 +33,12 @@ xGSImpl::xGSImpl() :
     p_swapchain(nullptr),
     p_device(nullptr),
     p_context(nullptr),
-    p_defaultrt(nullptr)
+    p_widget(0),
+    p_checkresize(false),
+    p_defaultrtwidth(0),
+    p_defaultrtheight(0),
+    p_defaultrt(nullptr),
+    p_defaultrtds(nullptr)
 {
     // TODO: xGSImpl::xGSImpl DX11
 
@@ -50,6 +55,11 @@ void xGSImpl::debugTrackDXError(const char *text)
 void xGSImpl::CreateRendererImpl(const GSrendererdescription &desc)
 {
     // TODO: xGSImpl::CreateRenderer
+
+    // TODO: select adapter
+    // TODO: use desc options
+
+    p_widget = desc.widget;
 
     DXGI_SWAP_CHAIN_DESC swapchaindesc = {};
     swapchaindesc.SampleDesc.Count = 1;
@@ -68,24 +78,18 @@ void xGSImpl::CreateRendererImpl(const GSrendererdescription &desc)
         return;
     }
 
-    ID3D11Texture2D *backbuffertex = nullptr;
-    p_swapchain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&backbuffertex));
-    if (backbuffertex == nullptr) {
-        DestroyRendererImpl();
-        error(GSE_SUBSYSTEMFAILED);
-        return;
-    }
-    p_device->CreateRenderTargetView(backbuffertex, nullptr, &p_defaultrt);
-    backbuffertex->Release();
+    // NOTE: fullscreen mode support
+    RECT rc;
+    GetClientRect(HWND(p_widget), &rc);
+    p_defaultrtwidth = rc.right;
+    p_defaultrtheight = rc.bottom;
 
-    if (p_defaultrt == nullptr) {
-        DestroyRendererImpl();
-        error(GSE_SUBSYSTEMFAILED);
-        return;
-    }
+    // default RT
+    RecreateDefaultRT();
+    RecreateDefaultRTDepthStencil();
+    // TODO: check errors
 
-    // TODO: depth/stencil
-    p_context->OMSetRenderTargets(1, &p_defaultrt, nullptr);
+    p_context->OMSetRenderTargets(1, &p_defaultrt, p_defaultrtds);
 
     memset(p_timerqueries, 0, sizeof(p_timerqueries));
     p_timerindex = 0;
@@ -106,6 +110,7 @@ void xGSImpl::DestroyRendererImpl()
 {
     // TODO: xGSImpl::DestroyRendererImpl
     ::Release(p_defaultrt);
+    ::Release(p_defaultrtds);
     ::Release(p_swapchain);
     ::Release(p_device);
     ::Release(p_context);
@@ -120,23 +125,22 @@ void xGSImpl::CreateSamplersImpl(const GSsamplerdescription *samplers, GSuint co
 
 void xGSImpl::GetRenderTargetSizeImpl(GSsize &size)
 {
-    // TODO: xGSImpl::RenderTargetSize
-    //size = p_rendertarget ? p_rendertarget->size() : ;
     if (p_rendertarget) {
         size = p_rendertarget->size();
     } else {
-        DXGI_SWAP_CHAIN_DESC desc;
-        p_swapchain->GetDesc(&desc);
-        size.width = desc.BufferDesc.Width;
-        size.height = desc.BufferDesc.Height;
+        CheckDefaultRTResize();
+        size.width = p_defaultrtwidth;
+        size.height = p_defaultrtheight;
     }
 }
 
 void xGSImpl::ClearImpl(GSbool color, GSbool depth, GSbool stencil, const GScolor &colorvalue, float depthvalue, GSdword stencilvalue)
 {
+    CheckDefaultRTResize();
+
     // TODO: non default RT's, depthstencil
     ID3D11RenderTargetView *rt = p_defaultrt;
-    ID3D11DepthStencilView *ds = nullptr;
+    ID3D11DepthStencilView *ds = p_defaultrtds;
 
     if (color) {
         p_context->ClearRenderTargetView(p_defaultrt, &colorvalue.r);
@@ -160,11 +164,19 @@ void xGSImpl::ClearImpl(GSbool color, GSbool depth, GSbool stencil, const GScolo
 void xGSImpl::DisplayImpl()
 {
     p_swapchain->Present(0, 0);
+
+    // this flag should be set only in not fullscreen mode
+    // due to possible window size changes the size of
+    // default RT swapchain and DS buffers should be adjusted
+    p_checkresize = true;
 }
 
 void xGSImpl::SetRenderTargetImpl()
 {
     // TODO: xGSImpl::SetRenderTargetImpl
+    if (p_rendertarget == nullptr) {
+        CheckDefaultRTResize();
+    }
 }
 
 void xGSImpl::SetViewportImpl(const GSrect &viewport)
@@ -192,6 +204,11 @@ void xGSImpl::SetBlendColorImpl(const GScolor &color)
 void xGSImpl::SetUniformValueImpl(GSenum type, GSint location, const void *value)
 {
     // TODO: xGSImpl::SetUniformValueImpl
+}
+
+void xGSImpl::SetupGeometryImpl(xGSGeometryImpl *geometry)
+{
+    // TODO: xGSImpl::SetupGeometryImpl
 }
 
 
@@ -381,6 +398,71 @@ void xGSImpl::AddTextureFormatDescriptor(GSvalue format)
         format,
         TextureFormatDescriptor(0)
     ));
+}
+
+void xGSImpl::CheckDefaultRTResize()
+{
+    if (!p_checkresize || p_rendertarget) {
+        return;
+    }
+
+    RECT rc;
+    GetClientRect(HWND(p_widget), &rc);
+
+    if (rc.right && rc.bottom && (rc.right != p_defaultrtwidth || rc.bottom != p_defaultrtheight)) {
+        p_defaultrtwidth = rc.right;
+        p_defaultrtheight = rc.bottom;
+
+        p_swapchain->ResizeBuffers(0, p_defaultrtwidth, p_defaultrtheight, DXGI_FORMAT_UNKNOWN, 0);
+        RecreateDefaultRT();
+        RecreateDefaultRTDepthStencil();
+
+        p_context->OMSetRenderTargets(1, &p_defaultrt, p_defaultrtds);
+    }
+
+    p_checkresize = false;
+}
+
+void xGSImpl::RecreateDefaultRT()
+{
+    ::Release(p_defaultrt);
+    ID3D11Texture2D *backbuffertex = nullptr;
+    p_swapchain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&backbuffertex));
+    p_device->CreateRenderTargetView(backbuffertex, nullptr, &p_defaultrt);
+    backbuffertex->Release();
+}
+
+void xGSImpl::RecreateDefaultRTDepthStencil()
+{
+    ::Release(p_defaultrtds);
+
+    D3D11_TEXTURE2D_DESC depthstencildesc = {};
+    depthstencildesc.Width = p_defaultrtwidth;
+    depthstencildesc.Height = p_defaultrtheight;
+    depthstencildesc.MipLevels = 1;
+    depthstencildesc.ArraySize = 1;
+    depthstencildesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+    depthstencildesc.SampleDesc.Count = 1;
+    depthstencildesc.SampleDesc.Quality = 0;
+    depthstencildesc.Usage = D3D11_USAGE_DEFAULT;
+    depthstencildesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+    depthstencildesc.CPUAccessFlags = 0;
+    depthstencildesc.MiscFlags = 0;
+
+    ID3D11Texture2D *depthstenciltex = nullptr;
+    p_device->CreateTexture2D(&depthstencildesc, nullptr, &depthstenciltex);
+    if (depthstenciltex == nullptr) {
+        error(GSE_SUBSYSTEMFAILED);
+        return;
+    }
+
+    D3D11_DEPTH_STENCIL_VIEW_DESC desc = {};
+    desc.Format = depthstencildesc.Format;
+    desc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+    desc.Texture2D.MipSlice = 0;
+
+    p_device->CreateDepthStencilView(depthstenciltex, &desc, &p_defaultrtds);
+    depthstenciltex->Release();
 }
 
 void xGSImpl::DefaultRTFormats()
