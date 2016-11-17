@@ -151,22 +151,34 @@ GSerror xGScontext::CreateRenderer(const GSrendererdescription &desc)
         SetAttribute(attr, pfa, WGL_ACCELERATION_ARB,   WGL_FULL_ACCELERATION_ARB);
 
         int alphabitsrequested = alpha_bits(desc.colorformat);
-        int stencilbitsrequested = stencil_bits(desc.stencilformat);
+        int stencilbitsrequested = clamp(
+            stencil_bits(desc.stencilformat),
+            0,
+            maxBitsSupport(p_stencilbitssupport)
+        );
 
-        SetAttribute(attr, pfa, WGL_COLOR_BITS_ARB, color_bits(desc.colorformat));
+        SetAttribute(
+            attr, pfa, WGL_COLOR_BITS_ARB,
+            clamp(color_bits(desc.colorformat), 0, maxBitsSupport(p_colorbitssupport))
+        );
         SetAttribute(attr, pfa, WGL_ALPHA_BITS_ARB, alphabitsrequested);
 
-        int value_depthbits =
-            SetAttribute(attr, pfa, WGL_DEPTH_BITS_ARB, depth_bits(desc.depthformat));
+        int value_depthbits = SetAttribute(
+            attr, pfa, WGL_DEPTH_BITS_ARB,
+            clamp(depth_bits(desc.depthformat), 0, maxBitsSupport(p_depthbitssupport))
+        );
 
         int value_stencilbits =
             SetAttribute(attr, pfa, WGL_STENCIL_BITS_ARB, stencilbitsrequested);
 
+        int value_multisample = -1;
         if (desc.multisample && p_multisample) {
             SetAttribute(attr, pfa, WGL_SAMPLE_BUFFERS_ARB, desc.multisample ? 1 : 0);
-            SetAttribute(
+            value_multisample = SetAttribute(
                 attr, pfa, WGL_SAMPLES_ARB,
-                desc.multisample == GS_DEFAULT ? p_multisamplemax : desc.multisample
+                desc.multisample == GS_DEFAULT ?
+                    p_multisamplemax :
+                    clamp(desc.multisample, 1, p_multisamplemax)
             );
         }
 
@@ -193,8 +205,16 @@ GSerror xGScontext::CreateRenderer(const GSrendererdescription &desc)
                 }
             }
 
-            if (n == 0 && pfa[value_stencilbits > 0]) {
-                pfa[value_stencilbits] = 0;
+            // if pf still couldn't be found, try to turn off
+            // other features...
+            if (n == 0) {
+                if (value_multisample != -1 && pfa[value_multisample] > 1) {
+                    --pfa[value_multisample];
+                } else if (pfa[value_stencilbits] > 0) {
+                    pfa[value_stencilbits] = 0;
+                } else {
+                    break;
+                }
             }
         }
 
@@ -468,23 +488,42 @@ GSbool xGScontext::EnumDefaultPixelFormats(xGSdefaultcontext &dc)
 HGLRC xGScontext::CreateContext(HDC device)
 {
     if (wglCreateContextAttribsARB) {
-        GLint attribs[9] = {
-            WGL_CONTEXT_MAJOR_VERSION_ARB, 4,
-            WGL_CONTEXT_MINOR_VERSION_ARB, 0,
-            WGL_CONTEXT_PROFILE_MASK_ARB,  WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
-            WGL_CONTEXT_FLAGS_ARB,         WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB
-#ifdef _DEBUG
-            | WGL_CONTEXT_DEBUG_BIT_ARB
-#endif
-            ,
+        struct Version
+        {
+            int major;
+            int minor;
+        };
+
+        const Version versions[] = {
+            4, 0,
+            3, 3,
             0
         };
 
-        if (!WGLEW_ARB_create_context_profile) {
-            attribs[4] = 0;
-        }
+        HGLRC context = 0;
+        int ver = 0;
+        do
+        {
+            GLint attribs[9] = {
+                WGL_CONTEXT_MAJOR_VERSION_ARB, versions[ver].major,
+                WGL_CONTEXT_MINOR_VERSION_ARB, versions[ver].minor,
+                WGL_CONTEXT_PROFILE_MASK_ARB,  WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
+                WGL_CONTEXT_FLAGS_ARB,         WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB
+#ifdef _DEBUG
+                | WGL_CONTEXT_DEBUG_BIT_ARB
+#endif
+                ,
+                0
+            };
 
-        return wglCreateContextAttribsARB(device, 0, attribs);
+            if (!WGLEW_ARB_create_context_profile) {
+                attribs[4] = 0;
+            }
+
+            context = wglCreateContextAttribsARB(device, 0, attribs);
+        } while (context == 0 && versions[++ver].major != 0);
+
+        return context;
     } else {
         return wglCreateContext(device);
     }

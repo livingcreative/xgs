@@ -37,7 +37,7 @@ namespace xGS
         GSsize RenderTargetSize() const;
 
     private:
-        void setBitsSupport(GSuint &bitflags, int bits)
+        static void setBitsSupport(GSuint &bitflags, int bits)
         {
             switch (bits) {
                 case 2: bitflags |= b2; break;
@@ -49,6 +49,23 @@ namespace xGS
                 case 64: bitflags |= b64; break;
                 case 128: bitflags |= b128; break;
             }
+        }
+
+        static int maxBitsSupport(GSuint bitflags)
+        {
+            int result = 0;
+
+            int flags[] = { b2, b4, b8, b16, b24, b32, b64, b128 };
+            int bits[] = { 2, 4, 8, 16, 24, 32, 64, 128 };
+
+            for (int n = 7; n >= 0; --n) {
+                if (bitflags & flags[n]) {
+                    result = bits[n];
+                    break;
+                }
+            }
+
+            return result;
         }
 
         GSbool EnumWGLPixelFormats(xGSdefaultcontext &dc);
