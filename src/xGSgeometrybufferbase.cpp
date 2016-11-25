@@ -82,7 +82,7 @@ GSbool xGSGeometryBufferBase::allocateGeometry(GSuint vertexcount, GSuint indexc
             return GS_FALSE;
         }
 
-        basevertex = GSuint(vertexmemory) / p_vertexdecl.buffer_size();
+        basevertex = buffercast(vertexmemory) / p_vertexdecl.buffer_size();
 
         commitFreeBlock(commitVertexBlock, p_freevertices);
         commitFreeBlock(commitIndexBlock, p_freeindices);
@@ -94,10 +94,10 @@ GSbool xGSGeometryBufferBase::allocateGeometry(GSuint vertexcount, GSuint indexc
             return GS_FALSE;
         }
 
-        vertexmemory = reinterpret_cast<GSptr>(p_vertexdecl.buffer_size(p_currentvertex));
+        vertexmemory = buffercast(p_vertexdecl.buffer_size(p_currentvertex));
         basevertex = p_currentvertex;
         p_currentvertex += vertexcount;
-        indexmemory = reinterpret_cast<GSptr>(index_buffer_size(p_indexformat, p_currentindex));
+        indexmemory = buffercast(index_buffer_size(p_indexformat, p_currentindex));
         p_currentindex += indexcount;
     }
 
@@ -140,7 +140,7 @@ bool xGSGeometryBufferBase::allocateBlock(GSuint count, GSuint elementsize, GSui
     if (block == GS_UNDEFINED) {
         // free block of required sized haven't been found, try to allocate at top
         if ((current + count) <= maxcount) {
-            memory = reinterpret_cast<GSptr>(current * elementsize);
+            memory = buffercast(current * elementsize);
             current += count;
         } else {
             return false;
@@ -174,13 +174,13 @@ void xGSGeometryBufferBase::freeBlock(GSptr memory, GSuint count, GSuint element
         return;
     }
 
-    GSptr top = reinterpret_cast<GSptr>(current * elementsize);
+    GSptr top = buffercast(current * elementsize);
     if (top == getp(memory, count * elementsize)) {
         // freeing data at top, just return current pointer back
         current -= count;
 
         // find free block ending and current top and remove it, lowering top
-        GSptr newtop = reinterpret_cast<GSptr>(current * elementsize);
+        GSptr newtop = buffercast(current * elementsize);
         for (size_t n = 0; n < list.size(); ++n) {
             if (newtop == getp(list[n].memory, list[n].count * elementsize)) {
                 current -= list[n].count;

@@ -44,21 +44,46 @@ GSbool xGSGeometryBufferImpl::allocate(const GSgeometrybufferdescription &desc)
 {
     GLenum usage = 0;
 
-    switch (desc.type) {
 #ifdef GS_CONFIG_BUFFER_STORAGE
-        case GS_GBTYPE_STATIC:
-            usage = GL_MAP_WRITE_BIT;
-            break;
+    if (glBufferStorage) {
+        switch (desc.type) {
+            case GS_GBTYPE_STATIC:
+                usage = GL_MAP_WRITE_BIT;
+                break;
 
-        case GS_GBTYPE_GEOMETRYHEAP:
-            usage = GL_MAP_WRITE_BIT;
-            break;
+            case GS_GBTYPE_GEOMETRYHEAP:
+                usage = GL_MAP_WRITE_BIT;
+                break;
 
-        case GS_GBTYPE_IMMEDIATE:
-            // TODO: implement double/triple buffering and persistent mapping
-            usage = GL_MAP_WRITE_BIT | GL_DYNAMIC_STORAGE_BIT;
-            break;
+            case GS_GBTYPE_IMMEDIATE:
+                // TODO: implement double/triple buffering and persistent mapping
+                usage = GL_MAP_WRITE_BIT | GL_DYNAMIC_STORAGE_BIT;
+                break;
+
+            default:
+                return p_owner->error(GSE_INVALIDENUM);
+        }
+    } else {
+        switch (desc.type) {
+            case GS_GBTYPE_STATIC:
+                usage = GL_STATIC_DRAW;
+                break;
+
+            case GS_GBTYPE_GEOMETRYHEAP:
+                usage = GL_STATIC_DRAW;
+                break;
+
+            case GS_GBTYPE_IMMEDIATE:
+                // TODO: implement double/triple buffering and persistent mapping
+                usage = GL_DYNAMIC_DRAW;
+                break;
+
+            default:
+                return p_owner->error(GSE_INVALIDENUM);
+        }
+    }
 #else
+    switch (desc.type) {
         case GS_GBTYPE_STATIC:
             usage = GL_STATIC_DRAW;
             break;
@@ -71,11 +96,11 @@ GSbool xGSGeometryBufferImpl::allocate(const GSgeometrybufferdescription &desc)
             // TODO: implement double/triple buffering and persistent mapping
             usage = GL_DYNAMIC_DRAW;
             break;
-#endif
 
         default:
             return p_owner->error(GSE_INVALIDENUM);
     }
+#endif
 
     p_type = desc.type;
 
@@ -89,10 +114,17 @@ GSbool xGSGeometryBufferImpl::allocate(const GSgeometrybufferdescription &desc)
     glBindBuffer(GL_ARRAY_BUFFER, p_vertexbuffer);
 
 #ifdef GS_CONFIG_BUFFER_STORAGE
-    glBufferStorage(
-        GL_ARRAY_BUFFER, p_vertexdecl.buffer_size(p_vertexcount),
-        nullptr, usage
-    );
+    if (glBufferStorage) {
+        glBufferStorage(
+            GL_ARRAY_BUFFER, p_vertexdecl.buffer_size(p_vertexcount),
+            nullptr, usage
+        );
+    } else {
+        glBufferData(
+            GL_ARRAY_BUFFER, p_vertexdecl.buffer_size(p_vertexcount),
+            nullptr, usage
+        );
+    }
 #else
     glBufferData(
         GL_ARRAY_BUFFER, p_vertexdecl.buffer_size(p_vertexcount),
@@ -105,10 +137,17 @@ GSbool xGSGeometryBufferImpl::allocate(const GSgeometrybufferdescription &desc)
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, p_indexbuffer);
 
 #ifdef GS_CONFIG_BUFFER_STORAGE
-        glBufferStorage(
-            GL_ELEMENT_ARRAY_BUFFER, index_buffer_size(p_indexformat, p_indexcount),
-            nullptr, usage
-        );
+        if (glBufferStorage) {
+            glBufferStorage(
+                GL_ELEMENT_ARRAY_BUFFER, index_buffer_size(p_indexformat, p_indexcount),
+                nullptr, usage
+            );
+        } else {
+            glBufferData(
+                GL_ELEMENT_ARRAY_BUFFER, index_buffer_size(p_indexformat, p_indexcount),
+                nullptr, usage
+            );
+        }
 #else
         glBufferData(
             GL_ELEMENT_ARRAY_BUFFER, index_buffer_size(p_indexformat, p_indexcount),
@@ -246,5 +285,6 @@ void xGSGeometryBufferImpl::ReleaseRendererResources()
 
     if (p_indexbuffer) {
         glDeleteBuffers(1, &p_indexbuffer);
+        p_indexbuffer = 0;
     }
 }

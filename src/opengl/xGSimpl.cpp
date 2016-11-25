@@ -557,7 +557,7 @@ void xGSImpl::DrawImmediatePrimitives(xGSGeometryBufferImpl *buffer)
             glDrawElementsBaseVertex(
                 gl_primitive_type(p.type),
                 p.indexcount, gl_index_type(buffer->indexFormat()),
-                reinterpret_cast<GSptr>(index_buffer_size(buffer->indexFormat(), p.firstindex)),
+                buffercast(index_buffer_size(buffer->indexFormat(), p.firstindex)),
                 p.firstvertex
             );
         }

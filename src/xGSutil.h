@@ -59,7 +59,7 @@ namespace xGS
         GSint  pfDepthBits;   // bits for depth
         GSint  pfStencilBits; // bits for stencil
         GSint  pfMultisample; // AA type (samples count)
-        GSbool pfSRGB;
+        bool   pfSRGB;
     };
 
 
@@ -92,7 +92,7 @@ namespace xGS
         }
     }
 
-    inline GSint vertex_component_count(const GSvertexcomponent &c)
+    inline GSuint vertex_component_count(const GSvertexcomponent &c)
     {
         switch (c.type) {
             case GSVD_POSITION:  return 3;
@@ -107,7 +107,7 @@ namespace xGS
         }
     }
 
-    inline GSint vertex_component_size(const GSvertexcomponent &c)
+    inline GSuint vertex_component_size(const GSvertexcomponent &c)
     {
         switch (c.type) {
             case GSVD_POSITION:  return sizeof(float) * 3;
@@ -122,7 +122,7 @@ namespace xGS
         }
     }
 
-    inline GSint index_buffer_size(GSenum format, int count = 1)
+    inline GSuint index_buffer_size(GSenum format, int count = 1)
     {
         int result = 0;
 
@@ -143,6 +143,17 @@ namespace xGS
         return result * align;
     }
 
+    inline GSptr buffercast(GSuint addr)
+    {
+        return GSptr(reinterpret_cast<char*>(0) + addr);
+    }
+
+    inline GSuint buffercast(GSptr addr)
+    {
+        // TODO: check more robust solution for that
+        GSuint *ints = reinterpret_cast<GSuint*>(&addr);
+        return *ints;
+    }
 
     class GSvertexdecl
     {
@@ -150,7 +161,7 @@ namespace xGS
         GSvertexdecl();
         GSvertexdecl(const GSvertexcomponent *decl);
 
-        GSint buffer_size(int count = 1) const;
+        GSuint buffer_size(int count = 1) const;
         GSbool dynamic() const { return p_dynamic; }
         const std::vector<GSvertexcomponent>& declaration() const { return p_decl; }
 

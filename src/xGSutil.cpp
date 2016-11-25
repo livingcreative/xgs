@@ -29,9 +29,9 @@ GSvertexdecl::GSvertexdecl(const GSvertexcomponent *decl) :
     initialize(decl);
 }
 
-GSint GSvertexdecl::buffer_size(int count) const
+GSuint GSvertexdecl::buffer_size(int count) const
 {
-    GSint result = 0;
+    GSuint result = 0;
     for (auto const &i : p_decl) {
         result += vertex_component_size(i);
     }
