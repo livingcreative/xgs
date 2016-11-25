@@ -77,7 +77,7 @@ namespace xGS
         GSenum     p_colorformat[GS_MAX_FB_COLORTARGETS];
         GSenum     p_depthstencilformat;
         GSenum     p_multisample;
-        GSbool     p_srgb;
+        bool       p_srgb;
 
         GLuint     p_framebuffer;
         GLuint     p_resolvebuffer;

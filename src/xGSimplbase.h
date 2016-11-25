@@ -51,7 +51,7 @@ namespace xGS
         void free(GSptr &memory);
 
         // error set-up
-        GSbool error(GSerror code, DebugMessageLevel level = DebugMessageLevel::Error);
+        bool error(GSerror code, DebugMessageLevel level = DebugMessageLevel::Error);
 
         // debug logging
         void debug(DebugMessageLevel level, const char *format, ...);

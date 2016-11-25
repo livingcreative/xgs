@@ -331,12 +331,12 @@ GSbool xGSStateImpl::allocate(const GSstatedescription &desc)
     p_cull = desc.rasterizer.cull != GS_CULL_NONE;
     p_cullface = gl_cull_face(desc.rasterizer.cull);
     p_pointsize = desc.rasterizer.pointsize;
-    p_programpointsize = desc.rasterizer.programpointsize;
+    p_programpointsize = desc.rasterizer.programpointsize != 0;
     p_colormask = desc.blend.writemask != 0;
-    p_depthmask = desc.depthstencil.depthmask;
+    p_depthmask = desc.depthstencil.depthmask != 0;
     p_depthtest = desc.depthstencil.depthtest != GS_DEPTHTEST_NONE;
     p_depthfunc = gl_compare_func(desc.depthstencil.depthtest);
-    p_blendseparate = desc.blend.separate;
+    p_blendseparate = desc.blend.separate != 0;
     for (size_t n = 0; n < GS_MAX_FB_COLORTARGETS; ++n) {
         p_blend[n] = desc.blend.parameters[n].colorop != GS_BLEND_NONE && desc.blend.parameters[n].alphaop != GS_BLEND_NONE;
         p_blendeq[n] = gl_blend_eq(desc.blend.parameters[n].colorop);
@@ -347,7 +347,7 @@ GSbool xGSStateImpl::allocate(const GSstatedescription &desc)
         p_blenddstalpha[n] = gl_blend_factor(desc.blend.parameters[n].dstalpha);
     }
     p_polygonoffset = desc.rasterizer.polygonoffset;
-    p_multisample = desc.rasterizer.multisample;
+    p_multisample = desc.rasterizer.multisample != 0;
 
     return p_owner->error(GS_OK);
  }

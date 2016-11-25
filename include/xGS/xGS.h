@@ -26,7 +26,7 @@
 #endif
 
 
-typedef bool         GSbool;
+typedef unsigned int GSbool;
 
 typedef short        GSword;
 typedef int          GSint;
@@ -42,6 +42,9 @@ typedef void*        GShandle;
 typedef void*        GSwidget;
 
 typedef unsigned long long GSuint64;
+
+
+#pragma pack(push, 1)
 
 struct GSsize
 {
@@ -70,6 +73,8 @@ struct GScolor
         return result;
     }
 };
+
+#pragma pack(pop)
 
 
 // -----------------------------------------------------------------------------
@@ -586,6 +591,8 @@ typedef InterfacePtr<IxGSInput>          IxGSInputRef;
 typedef InterfacePtr<IxGSParameters>     IxGSParametersRef;
 
 
+#pragma pack(push, 1)
+
 // Renderer description structure
 //      GS_DEFAULT value for modeindex will left video mode unchanged
 //      GS_DEFAULT value for bits and multisample will choose best available values for
@@ -1063,6 +1070,8 @@ struct GSimmediateprimitive
     GSptr  indexdata;
     GSuint indexcount;
 };
+
+#pragma pack(pop)
 
 
 /*

@@ -96,7 +96,7 @@ void xGSImplBase::free(GSptr &memory)
     memory = nullptr;
 }
 
-GSbool xGSImplBase::error(GSerror code, DebugMessageLevel level)
+bool xGSImplBase::error(GSerror code, DebugMessageLevel level)
 {
     p_error = code;
     if (p_error != GS_OK) {
