@@ -1,6 +1,8 @@
 ﻿# xgs
 3D Graphics API low-level abstraction layer
 
+[![Build status](https://ci.appveyor.com/api/projects/status/hcv94urqio08trux?svg=true)](https://ci.appveyor.com/project/livingcreative/xgs)
+
 ## What is it
 xgs is easy to use C++ API for rendering 3D graphics. Its main purpose is to make 3D graphics
 programming easier and hide nasty details of platform specific graphics APIs. It's crossplatform
