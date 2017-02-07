@@ -37,29 +37,29 @@ namespace xGS
     };
 
 
-    inline int dx12_index_type(GSenum type)
+    inline DXGI_FORMAT dx12_index_type(GSenum type)
     {
         switch (type) {
-            case GS_INDEX_16: return 0;
-            case GS_INDEX_32: return 0;
+            case GS_INDEX_16: return DXGI_FORMAT_R16_UINT;
+            case GS_INDEX_32: return DXGI_FORMAT_R32_UINT;
         }
 
-        return 0;
+        return DXGI_FORMAT(0);
     }
 
-    inline int dx12_primitive_type(GSenum type)
+    inline D3D12_PRIMITIVE_TOPOLOGY dx12_primitive_type(GSenum type, unsigned int patchverts = 0)
     {
         switch (type) {
-            case GS_PRIM_POINTS:        return 0;
-            case GS_PRIM_LINES:         return 0;
-            case GS_PRIM_LINESTRIP:     return 0;
-            case GS_PRIM_TRIANGLES:     return 0;
-            case GS_PRIM_TRIANGLESTRIP: return 0;
-            case GS_PRIM_TRIANGLEFAN:   return 0;
-            case GS_PRIM_PATCHES:       return 0;
+            case GS_PRIM_POINTS:        return D3D_PRIMITIVE_TOPOLOGY_POINTLIST;
+            case GS_PRIM_LINES:         return D3D_PRIMITIVE_TOPOLOGY_LINELIST;
+            case GS_PRIM_LINESTRIP:     return D3D_PRIMITIVE_TOPOLOGY_LINESTRIP;
+            case GS_PRIM_TRIANGLES:     return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+            case GS_PRIM_TRIANGLESTRIP: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
+            //case GS_PRIM_TRIANGLEFAN:   return 0; // TODO: do we need FANs?
+            case GS_PRIM_PATCHES:       return D3D12_PRIMITIVE_TOPOLOGY(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST + patchverts);
         }
 
-        return 0;
+        return D3D12_PRIMITIVE_TOPOLOGY(0);
     }
 
     inline D3D12_TEXTURE_ADDRESS_MODE dx12_texture_wrap(GSenum wrap)

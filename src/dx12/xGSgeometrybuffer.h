@@ -50,11 +50,12 @@ namespace xGS
         void ReleaseRendererResources();
 
     private:
-        //ID3D12Buffer *p_vertexbuffer;
-        //ID3D12Buffer *p_indexbuffer;
-        char         *p_lockmemory;
-        size_t        p_lockoffset;
-        size_t        p_locksize;
+        ID3D12Resource *p_vertexbuffer;
+        ID3D12Resource *p_indexbuffer;
+        ID3D12Resource *p_lockbuffer;
+        void           *p_lockmemory;
+        size_t          p_lockoffset;
+        size_t          p_locksize;
     };
 
 } // namespace xGS

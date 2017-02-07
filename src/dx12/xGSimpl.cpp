@@ -38,6 +38,8 @@ xGSImpl::xGSImpl() :
     p_commandqueue(nullptr),
     p_commandlist(nullptr),
     p_cmdallocator(nullptr),
+    p_intcmdallocator(nullptr),
+    p_intcommandlist(nullptr),
     p_rtv(nullptr),
     p_dsv(nullptr),
     p_cbvsrv(nullptr),
@@ -123,6 +125,22 @@ void xGSImpl::CreateRendererImpl(const GSrendererdescription &desc)
         return;
     }
     // NOTE: list left in opened state!
+
+    result = p_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&p_intcmdallocator));
+    if (result != S_OK) {
+        DestroyRendererImpl();
+        error(GSE_SUBSYSTEMFAILED);
+        return;
+    }
+
+    result = p_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, p_intcmdallocator, nullptr, IID_PPV_ARGS(&p_intcommandlist));
+    if (result != S_OK) {
+        DestroyRendererImpl();
+        error(GSE_SUBSYSTEMFAILED);
+        return;
+    }
+    p_intcommandlist->Close();
+    // NOTE: internal list left in closed state!
 
     IDXGIFactory1 *factory = nullptr;
     result = CreateDXGIFactory1(IID_PPV_ARGS(&factory));
@@ -244,6 +262,8 @@ void xGSImpl::DestroyRendererImpl()
 
     ::Release(p_commandlist);
     ::Release(p_cmdallocator);
+    ::Release(p_intcommandlist);
+    ::Release(p_intcmdallocator);
 
     ::Release(p_rtv);
     ::Release(p_dsv);
@@ -433,6 +453,10 @@ void xGSImpl::SetUniformValueImpl(GSenum type, GSint location, const void *value
 void xGSImpl::SetupGeometryImpl(xGSGeometryImpl *geometry)
 {
     // TODO: xGSImpl::SetupGeometryImpl
+
+    p_commandlist->IASetPrimitiveTopology(dx12_primitive_type(
+        geometry->type(), geometry->patchVertices()
+    ));
 }
 
 
@@ -613,6 +637,21 @@ GSbool xGSImpl::GetTextureFormatDescriptor(GSvalue format, TextureFormatDescript
 //{
 //    TODO
 //}
+
+void xGSImpl::UploadBufferData(ID3D12Resource *source, ID3D12Resource *dest, size_t destoffset, size_t destsize)
+{
+    p_intcommandlist->Reset(p_intcmdallocator, nullptr);
+
+    TransitionBarrier(dest, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);
+    p_intcommandlist->CopyBufferRegion(dest, destoffset, source, 0, destsize);
+    TransitionBarrier(dest, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ);
+
+    p_intcommandlist->Close();
+
+    p_commandqueue->ExecuteCommandLists(1, reinterpret_cast<ID3D12CommandList**>(&p_intcommandlist));
+
+    WaitFence();
+}
 
 
 void xGSImpl::AddTextureFormatDescriptor(GSvalue format, GSint bpp, DXGI_FORMAT dxgifmt)

@@ -113,6 +113,8 @@ namespace xGS
         GSbool GetTextureFormatDescriptor(GSvalue format, TextureFormatDescriptor &descriptor);
         //const GSpixelformat& DefaultRenderTargetFormat();
 
+        void UploadBufferData(ID3D12Resource *source, ID3D12Resource *dest, size_t destoffset, size_t destsize);
+
     private:
         void AddTextureFormatDescriptor(GSvalue format, GSint bpp, DXGI_FORMAT dxgifmt);
         void RenderTargetSize(GSsize &size);
@@ -154,6 +156,9 @@ namespace xGS
         // TODO: this should go to render list object when
         ID3D12CommandAllocator      *p_cmdallocator;
         ID3D12GraphicsCommandList   *p_commandlist;
+
+        ID3D12CommandAllocator      *p_intcmdallocator;
+        ID3D12GraphicsCommandList   *p_intcommandlist;
 
         UINT                         p_rtvsize;
         UINT                         p_dsvsize;

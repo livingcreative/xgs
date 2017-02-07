@@ -22,7 +22,10 @@ using namespace c_util;
 
 
 xGSGeometryBufferImpl::xGSGeometryBufferImpl(xGSImpl *owner) :
-    xGSObjectImpl(owner)
+    xGSObjectImpl(owner),
+    p_vertexbuffer(nullptr),
+    p_indexbuffer(nullptr),
+    p_lockbuffer(nullptr)
 {
     p_owner->debug(DebugMessageLevel::Information, "GeometryBuffer object created\n");
 }
@@ -49,22 +52,35 @@ GSbool xGSGeometryBufferImpl::allocate(const GSgeometrybufferdescription &desc)
     p_vertexcount = desc.vertexcount;
     p_indexcount = p_indexformat != GS_INDEX_NONE ? desc.indexcount : 0;
 
-    // TODO: geometry buffers usage
-    //D3D11_BUFFER_DESC vertexbufferdesc = {};
-    //vertexbufferdesc.Usage = D3D11_USAGE_DEFAULT;
-    //vertexbufferdesc.ByteWidth = p_vertexdecl.buffer_size(p_vertexcount);
-    //vertexbufferdesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-    //vertexbufferdesc.CPUAccessFlags = 0;//D3D11_CPU_ACCESS_WRITE;
+    D3D12_HEAP_PROPERTIES heapprops = {
+        D3D12_HEAP_TYPE_DEFAULT,
+        D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+        D3D12_MEMORY_POOL_UNKNOWN,
+        1, 1
+    };
 
-    //p_owner->device()->CreateBuffer(&vertexbufferdesc, nullptr, &p_vertexbuffer);
+    D3D12_RESOURCE_DESC bufferdesc = {
+        D3D12_RESOURCE_DIMENSION_BUFFER,
+        0,
+        p_vertexdecl.buffer_size(p_vertexcount), 1, 1, 1,
+        DXGI_FORMAT_UNKNOWN 
+    };
+    bufferdesc.SampleDesc.Count = 1;
+    bufferdesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
 
-    //D3D11_BUFFER_DESC indexbufferdesc = {};
-    //indexbufferdesc.Usage = D3D11_USAGE_DEFAULT;
-    //indexbufferdesc.ByteWidth = index_buffer_size(p_indexformat, p_indexcount);
-    //indexbufferdesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-    //indexbufferdesc.CPUAccessFlags = 0;//D3D11_CPU_ACCESS_WRITE;
+    p_owner->device()->CreateCommittedResource(
+        &heapprops, D3D12_HEAP_FLAG_NONE, &bufferdesc, D3D12_RESOURCE_STATE_COMMON,
+        nullptr, IID_PPV_ARGS(&p_vertexbuffer)
+    );
 
-    //p_owner->device()->CreateBuffer(&indexbufferdesc, nullptr, &p_indexbuffer);
+    if (p_indexcount) {
+        bufferdesc.Width = index_buffer_size(p_indexformat, p_indexcount);
+
+        p_owner->device()->CreateCommittedResource(
+            &heapprops, D3D12_HEAP_FLAG_NONE, &bufferdesc, D3D12_RESOURCE_STATE_COMMON,
+            nullptr, IID_PPV_ARGS(&p_indexbuffer)
+        );
+    }
 
     return p_owner->error(GS_OK);
 }
@@ -113,29 +129,56 @@ GSptr xGSGeometryBufferImpl::lock(GSenum locktype, size_t offset, size_t size)
 
     // TODO: xGSGeometryBufferImpl::lock
 
-    p_lockmemory = new char[size];
+    D3D12_HEAP_PROPERTIES heapprops = {
+        D3D12_HEAP_TYPE_UPLOAD,
+        D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+        D3D12_MEMORY_POOL_UNKNOWN,
+        1, 1
+    };
+
+    D3D12_RESOURCE_DESC lockbufferdesc = {
+        D3D12_RESOURCE_DIMENSION_BUFFER,
+        0,
+        p_locktype == GS_LOCK_VERTEXDATA ?
+            p_vertexdecl.buffer_size(p_vertexcount) :
+            index_buffer_size(p_indexformat, p_indexcount),
+        1, 1, 1,
+        DXGI_FORMAT_UNKNOWN
+    };
+    lockbufferdesc.SampleDesc.Count = 1;
+    lockbufferdesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+
+    p_owner->device()->CreateCommittedResource(
+        &heapprops, D3D12_HEAP_FLAG_NONE, &lockbufferdesc,
+        D3D12_RESOURCE_STATE_GENERIC_READ,
+        nullptr, IID_PPV_ARGS(&p_lockbuffer)
+    );
+
+    D3D12_RANGE range = { offset, offset + size };
+    p_lockbuffer->Map(0, &range, &p_lockmemory);
+
     p_lockoffset = offset;
     p_locksize = size;
+
     return p_lockmemory;
 }
 
 void xGSGeometryBufferImpl::unlock()
 {
-    //D3D11_BOX box = {};
-    //box.left = UINT(p_lockoffset);
-    //box.right = UINT(p_lockoffset + p_locksize);
+    p_lockbuffer->Unmap(0, nullptr);
 
     switch (p_locktype) {
         case GS_LOCK_VERTEXDATA:
-            //p_owner->context()->UpdateSubresource(p_vertexbuffer, 0, &box, p_lockmemory, 0, 0);
+            p_owner->UploadBufferData(p_lockbuffer, p_vertexbuffer, p_lockoffset, p_locksize);
             break;
 
         case GS_LOCK_INDEXDATA:
-            //p_owner->context()->UpdateSubresource(p_indexbuffer, 0, &box, p_lockmemory, 0, 0);
+            p_owner->UploadBufferData(p_lockbuffer, p_indexbuffer, p_lockoffset, p_locksize);
             break;
     }
 
-    delete[] p_lockmemory;
+    ::Release(p_lockbuffer);
+    p_lockmemory = nullptr;
 }
 
 void xGSGeometryBufferImpl::BeginImmediateDrawing()
@@ -165,6 +208,6 @@ void xGSGeometryBufferImpl::EndImmediateDrawing()
 
 void xGSGeometryBufferImpl::ReleaseRendererResources()
 {
-    //::Release(p_vertexbuffer);
-    //::Release(p_indexbuffer);
+    ::Release(p_vertexbuffer);
+    ::Release(p_indexbuffer);
 }
