@@ -72,8 +72,10 @@ namespace xGS
         typedef std::vector<UniformBlock> UniformBlockList;
         typedef std::vector<Uniform> UniformList;
 
+        void Update(void *source, size_t offset, size_t size);
+
     private:
-        //ID3D11Buffer     *p_buffer;
+        ID3D12Resource   *p_buffer;
 
         GSuint            p_size;
 

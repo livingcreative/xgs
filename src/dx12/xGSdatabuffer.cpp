@@ -20,7 +20,7 @@ using namespace xGS;
 
 xGSDataBufferImpl::xGSDataBufferImpl(xGSImpl *owner) :
     xGSObjectImpl(owner),
-    //p_buffer(nullptr),
+    p_buffer(nullptr),
     p_size(0),
     p_locktype(GS_NONE)
 {
@@ -118,14 +118,26 @@ GSbool xGSDataBufferImpl::allocate(const GSdatabufferdescription &desc)
         return GS_FALSE;
     }
 
-    // TODO: allocate DX12 data buffer
-    //D3D11_BUFFER_DESC bufferdesc = {};
-    //bufferdesc.Usage = D3D11_USAGE_DYNAMIC;
-    //bufferdesc.ByteWidth = p_size;
-    //bufferdesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-    //bufferdesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+    D3D12_HEAP_PROPERTIES heapprops = {
+        D3D12_HEAP_TYPE_UPLOAD,
+        D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+        D3D12_MEMORY_POOL_UNKNOWN,
+        1, 1
+    };
 
-    //p_owner->device()->CreateBuffer(&bufferdesc, nullptr, &p_buffer);
+    D3D12_RESOURCE_DESC lockbufferdesc = {
+        D3D12_RESOURCE_DIMENSION_BUFFER,
+        0, p_size, 1, 1, 1,
+        DXGI_FORMAT_UNKNOWN
+    };
+    lockbufferdesc.SampleDesc.Count = 1;
+    lockbufferdesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+
+    p_owner->device()->CreateCommittedResource(
+        &heapprops, D3D12_HEAP_FLAG_NONE, &lockbufferdesc,
+        D3D12_RESOURCE_STATE_GENERIC_READ,
+        nullptr, IID_PPV_ARGS(&p_buffer)
+    );
 
     return p_owner->error(GS_OK);
 }
@@ -136,7 +148,7 @@ GSbool xGSDataBufferImpl::Update(GSuint offset, GSuint size, const GSptr data)
         return p_owner->error(GSE_INVALIDOPERATION);
     }
 
-    // TODO: update DX12 data buffer
+    Update(data, offset, size);
 
     return p_owner->error(GS_OK);
 }
@@ -157,7 +169,7 @@ GSbool xGSDataBufferImpl::UpdateBlock(GSuint block, GSuint index, const GSptr da
         return p_owner->error(GSE_INVALIDVALUE);
     }
 
-    // TODO: update DX12 data buffer
+    Update(data, ub.offset, ub.size);
 
     return p_owner->error(GS_OK);
 }
@@ -190,7 +202,7 @@ GSbool xGSDataBufferImpl::UpdateValue(GSuint block, GSuint index, GSuint uniform
 
     size_t offset = ub.offset + ub.size * index + u.offset + u.stride * uniformindex;
 
-    // TODO: update DX12 data buffer
+    Update(data, offset, u.size);
 
     return p_owner->error(GS_OK);
 }
@@ -206,8 +218,11 @@ GSptr xGSDataBufferImpl::Lock(GSdword access, void *lockdata)
     p_owner->error(GS_OK);
 
     // TODO: lock DX12 data buffer
+    void *mem = nullptr;
+    D3D12_RANGE range = { 0, p_size };
+    p_buffer->Map(0, &range, &mem);
 
-    return nullptr;
+    return mem;
 }
 
 GSbool xGSDataBufferImpl::Unlock()
@@ -218,13 +233,21 @@ GSbool xGSDataBufferImpl::Unlock()
 
     p_locktype = GS_NONE;
 
-    // TODO: unlock DX12 data buffer
+    p_buffer->Unmap(0, nullptr);
 
     return p_owner->error(GS_OK);
 }
 
 void xGSDataBufferImpl::ReleaseRendererResources()
 {
-    // TODO: release DX12 data buffer
-    //::Release(p_buffer);
+    ::Release(p_buffer);
+}
+
+void xGSDataBufferImpl::Update(void *source, size_t offset, size_t size)
+{
+    D3D12_RANGE range = { offset, offset + size };
+    void *mem = nullptr;
+    p_buffer->Map(0, &range, &mem);
+    memcpy(mem, source, size);
+    p_buffer->Unmap(0, nullptr);
 }
