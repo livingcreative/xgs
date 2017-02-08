@@ -40,6 +40,7 @@ xGSImpl::xGSImpl() :
     p_cmdallocator(nullptr),
     p_intcmdallocator(nullptr),
     p_intcommandlist(nullptr),
+    p_sampler(nullptr),
     p_rtv(nullptr),
     p_dsv(nullptr),
     p_cbvsrv(nullptr),
@@ -97,6 +98,7 @@ void xGSImpl::CreateRendererImpl(const GSrendererdescription &desc)
 
     p_event = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
 
+    p_samplersize = p_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
     p_rtvsize = p_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
     p_dsvsize = p_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
     p_cbvsrvsize = p_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
@@ -256,15 +258,12 @@ void xGSImpl::DestroyRendererImpl()
     CloseHandle(p_event);
     p_event = 0;
 
-    for (auto &sampler : p_samplerlist) {
-        //::Release(sampler.sampler);
-    }
-
     ::Release(p_commandlist);
     ::Release(p_cmdallocator);
     ::Release(p_intcommandlist);
     ::Release(p_intcmdallocator);
 
+    ::Release(p_sampler);
     ::Release(p_rtv);
     ::Release(p_dsv);
     ::Release(p_cbvsrv);
@@ -281,13 +280,28 @@ void xGSImpl::DestroyRendererImpl()
 
 void xGSImpl::CreateSamplersImpl(const GSsamplerdescription *samplers, GSuint count)
 {
-    for (auto &s : p_samplerlist) {
-        //s.sampler->Release();
+    ::Release(p_sampler);
+
+    D3D12_DESCRIPTOR_HEAP_DESC heapdesc = {};
+    heapdesc.NumDescriptors = count;
+    heapdesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
+    heapdesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+
+    HRESULT result = p_device->CreateDescriptorHeap(&heapdesc, IID_PPV_ARGS(&p_sampler));
+    if (result != S_OK) {
+        error(GSE_OUTOFRESOURCES);
+        return;
     }
+
+    p_samplerstart = p_sampler->GetCPUDescriptorHandleForHeapStart();
+    auto sampler = p_samplerstart;
 
     p_samplerlist.resize(count);
     for (size_t n = 0; n < count; ++n) {
         Sampler &s = p_samplerlist[n];
+
+        s.refcount = 0;
+        s.sampler = sampler;
 
         // TODO: check values
 
@@ -316,12 +330,15 @@ void xGSImpl::CreateSamplersImpl(const GSsamplerdescription *samplers, GSuint co
         desc.MaxLOD = float(samplers->maxlod);
         desc.MipLODBias = samplers->bias;
 
-        if (samplers->depthcompare) {
-            // TODO: should this mode affect filter?
-            desc.ComparisonFunc = dx12_compare_func(samplers->depthcompare);
-        }
+        desc.MaxAnisotropy = 1; // ?
 
-        //p_device->CreateSamplerState(&desc, &s.sampler);
+        desc.ComparisonFunc =
+            samplers->depthcompare ?
+            dx12_compare_func(samplers->depthcompare) :
+            D3D12_COMPARISON_FUNC_ALWAYS;
+
+        p_device->CreateSampler(&desc, sampler);
+        sampler.ptr += p_samplersize;
 
         ++samplers;
     }

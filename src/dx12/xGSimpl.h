@@ -135,8 +135,8 @@ namespace xGS
     protected:
         struct Sampler
         {
-            //ID3D12SamplerState *sampler;
-            GSuint refcount;
+            D3D12_CPU_DESCRIPTOR_HANDLE sampler;
+            GSuint                      refcount;
         };
 
         typedef std::vector<Sampler> SamplerList;
@@ -160,16 +160,19 @@ namespace xGS
         ID3D12CommandAllocator      *p_intcmdallocator;
         ID3D12GraphicsCommandList   *p_intcommandlist;
 
+        UINT                         p_samplersize;
         UINT                         p_rtvsize;
         UINT                         p_dsvsize;
         UINT                         p_cbvsrvsize;
 
         // TODO: heaps should be allocated in chunked manner automatically depending
         //       on allocation of resources that use them
+        ID3D12DescriptorHeap        *p_sampler;
         ID3D12DescriptorHeap        *p_rtv;
         ID3D12DescriptorHeap        *p_dsv;
         ID3D12DescriptorHeap        *p_cbvsrv;
 
+        D3D12_CPU_DESCRIPTOR_HANDLE  p_samplerstart;
         D3D12_CPU_DESCRIPTOR_HANDLE  p_rtvstart;
         D3D12_CPU_DESCRIPTOR_HANDLE  p_dsvstart;
         D3D12_CPU_DESCRIPTOR_HANDLE  p_cbvstart;
