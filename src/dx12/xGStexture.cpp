@@ -22,8 +22,7 @@ using namespace c_util;
 xGSTextureImpl::xGSTextureImpl(xGSImpl *owner) :
     xGSObjectImpl(owner),
     p_texturetype(GS_TEXTYPE_EMPTY),
-    //p_texture(nullptr),
-    //p_view(nullptr),
+    p_texture(nullptr),
     p_width(0),
     p_height(0),
     p_depth(0),
@@ -97,26 +96,31 @@ GSbool xGSTextureImpl::allocate(const GStexturedescription &desc)
     //viewdesc.Format = texdesc.format;
 
     // TODO: xGSTextureImpl::allocate
+
+    D3D12_HEAP_PROPERTIES heapprops = {
+        D3D12_HEAP_TYPE_DEFAULT,
+        D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+        D3D12_MEMORY_POOL_UNKNOWN,
+        1, 1
+    };
+
+    D3D12_RESOURCE_DESC dxtexdesc = { };
+    dxtexdesc.Height = 1;
+    dxtexdesc.DepthOrArraySize = p_texturetype == GS_TEXTYPE_3D ?
+        desc.depth : umax(1u, p_layers);
+    dxtexdesc.MipLevels = p_maxlevel + 1;
+    dxtexdesc.Format = texdesc.format;
+    dxtexdesc.SampleDesc.Count = 1; // TODO: ms textures
+
     switch (p_texturetype) {
         case GS_TEXTYPE_1D: {
-            //ID3D11Texture1D *tex = nullptr;
+            dxtexdesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE1D;
+            dxtexdesc.Width = p_width;
 
-            //D3D11_TEXTURE1D_DESC desc = {};
-            //desc.Width = p_width;
-            //desc.MipLevels = p_maxlevel + 1;
-            //desc.ArraySize = umax(1u, p_layers);
-            //desc.Format = texdesc.format;
-            //desc.Usage = D3D11_USAGE_DEFAULT;
-            //desc.BindFlags = bindflags;
-            //desc.CPUAccessFlags = 0;
-            //desc.MiscFlags = D3D11_RESOURCE_MISC_GENERATE_MIPS;
-
-            //p_owner->device()->CreateTexture1D(&desc, nullptr, &tex);
-            //p_texture = tex;
-
-            //viewdesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE1D;
-            //viewdesc.Texture1D.MipLevels = desc.MipLevels;
-            //viewdesc.Texture1D.MostDetailedMip = 0;
+            p_owner->device()->CreateCommittedResource(
+                &heapprops, D3D12_HEAP_FLAG_NONE, &dxtexdesc,
+                D3D12_RESOURCE_STATE_COMMON, nullptr, IID_PPV_ARGS(&p_texture)
+            );
 
             break;
         }
@@ -124,59 +128,49 @@ GSbool xGSTextureImpl::allocate(const GStexturedescription &desc)
         case GS_TEXTYPE_2D: {
             //ID3D11Texture2D *tex = nullptr;
 
+            // TODO: make this common!
             int w = p_width;
-            int h = p_width;
-            int levels = 0;
+            int h = p_height;
+            GSuint levels = 0;
             while (w > 0 || h > 0) {
                 ++levels;
                 w = w >> 1;
                 h = h >> 1;
             }
 
-            //D3D11_TEXTURE2D_DESC desc = {};
-            //desc.Width = p_width;
-            //desc.Height = p_height;
-            //desc.MipLevels = levels;
-            //desc.ArraySize = umax(1u, p_layers);
-            //desc.Format = texdesc.format;
-            //desc.SampleDesc.Count = 1;
-            //desc.Usage = D3D11_USAGE_DEFAULT;
-            //desc.BindFlags = bindflags;
-            //desc.CPUAccessFlags = 0;
-            //desc.MiscFlags = D3D11_RESOURCE_MISC_GENERATE_MIPS;
-            //
-            //p_owner->device()->CreateTexture2D(&desc, nullptr, &tex);
-            //p_texture = tex;
-            //
-            //viewdesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-            //viewdesc.Texture2D.MipLevels = desc.MipLevels;
-            //viewdesc.Texture2D.MostDetailedMip = 0;
+            dxtexdesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+            dxtexdesc.Width = p_width;
+            dxtexdesc.Height = p_height;
+            dxtexdesc.MipLevels = umin(levels, desc.maxlevel);
+
+            p_owner->device()->CreateCommittedResource(
+                &heapprops, D3D12_HEAP_FLAG_NONE, &dxtexdesc,
+                D3D12_RESOURCE_STATE_COMMON, nullptr, IID_PPV_ARGS(&p_texture)
+            );
 
             break;
         }
 
         case GS_TEXTYPE_3D: {
-            //ID3D11Texture3D *tex = nullptr;
+            // TODO
             break;
         }
 
         case GS_TEXTYPE_CUBEMAP: {
-            //ID3D11Texture2D *tex = nullptr;
+            // TODO
             break;
         }
 
         case GS_TEXTYPE_RECT: {
-            //ID3D11Texture2D *tex = nullptr;
+            // TODO
             break;
         }
 
         case GS_TEXTYPE_BUFFER: {
-            //ID3D11Texture1D *tex = nullptr;
+            // TODO
             break;
         }
     }
-
-    //p_owner->device()->CreateShaderResourceView(p_texture, &viewdesc, &p_view);
 
     return p_owner->error(GS_OK);
 }
@@ -223,9 +217,7 @@ void xGSTextureImpl::ReleaseRendererResources()
         DoUnlock();
     }
 
-    // TODO: xGSTextureImpl::ReleaseRendererResources
-    //::Release(p_view);
-    //::Release(p_texture);
+    ::Release(p_texture);
 }
 
 void xGSTextureImpl::DoUnlock()

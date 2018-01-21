@@ -37,8 +37,7 @@ namespace xGS
     public:
         GSbool allocate(const GStexturedescription &desc);
 
-        //ID3D11Resource* texture() const { return p_texture; }
-        //ID3D11ShaderResourceView* view() const { return p_view; }
+        ID3D12Resource* texture() const { return p_texture; }
 
         GSuint samples() const { return p_multisample; }
         GSenum format() const { return p_format; }
@@ -63,27 +62,26 @@ namespace xGS
         void UpdateImage(int level, GSptr data);
 
     private:
-        GSenum                    p_texturetype;  // texture type: 1D, 2D, etc...
-        GSenum                    p_format;       // texture texel format
+        GSenum          p_texturetype;  // texture type: 1D, 2D, etc...
+        GSenum          p_format;       // texture texel format
 
-        GSint                     p_bpp;          // format: BYTES per pixel
+        GSint           p_bpp;          // format: BYTES per pixel
 
-        //ID3D11Resource           *p_texture;
-        //ID3D11ShaderResourceView *p_view;
+        ID3D12Resource *p_texture;
 
-        GSuint                    p_width;        // width
-        GSuint                    p_height;       // height
-        GSuint                    p_depth;        // depth (3D texture only)
-        GSuint                    p_layers;       // array layers
-        GSuint                    p_multisample;  // multisample sample count
-        GSuint                    p_minlevel;     // minimum (base) defined MIP level
-        GSuint                    p_maxlevel;     // maximum defined MIP level
+        GSuint          p_width;        // width
+        GSuint          p_height;       // height
+        GSuint          p_depth;        // depth (3D texture only)
+        GSuint          p_layers;       // array layers
+        GSuint          p_multisample;  // multisample sample count
+        GSuint          p_minlevel;     // minimum (base) defined MIP level
+        GSuint          p_maxlevel;     // maximum defined MIP level
 
-        GSenum                    p_locktype;     // LOCK: locked texture part
-        GSdword                   p_lockaccess;   // LOCK: lock access
-        GSint                     p_locklayer;    // LOCK: locked texture layer (for array textures only)
-        GSint                     p_locklevel;    // LOCK: locked texture MIP level
-        char                     *p_lockmemory;
+        GSenum          p_locktype;     // LOCK: locked texture part
+        GSdword         p_lockaccess;   // LOCK: lock access
+        GSint           p_locklayer;    // LOCK: locked texture layer (for array textures only)
+        GSint           p_locklevel;    // LOCK: locked texture MIP level
+        char           *p_lockmemory;
 
 #ifdef _DEBUG
         GSuint          p_boundasrt;    // texture currently is render target
