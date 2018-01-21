@@ -30,7 +30,7 @@ namespace xGS
 
     // parameters object
     class xGSParametersImpl :
-        public xGSObjectImpl<xGSParameters, xGSParametersImpl>,
+        public xGSObjectImpl<xGSObjectBase<xGSParameters>, xGSParametersImpl>,
         public GSParametersState
     {
     public:

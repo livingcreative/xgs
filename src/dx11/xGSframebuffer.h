@@ -25,7 +25,7 @@ namespace xGS
 
 
     // framebuffer object
-    class xGSFrameBufferImpl : public xGSObjectImpl<xGSFrameBuffer, xGSFrameBufferImpl>
+    class xGSFrameBufferImpl : public xGSObjectImpl<xGSObjectBase<xGSFrameBuffer>, xGSFrameBufferImpl>
     {
     public:
         xGSFrameBufferImpl(xGSImpl *owner);
@@ -75,7 +75,7 @@ namespace xGS
         GSenum     p_colorformat[GS_MAX_FB_COLORTARGETS];
         GSenum     p_depthstencilformat;
         GSenum     p_multisample;
-        GSbool     p_srgb;
+        bool       p_srgb;
 
         Attachment p_colortextures[GS_MAX_FB_COLORTARGETS];
         Attachment p_depthtexture;

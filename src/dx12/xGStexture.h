@@ -22,7 +22,7 @@ namespace xGS
 {
 
     // texture object
-    class xGSTextureImpl : public xGSObjectImpl<xGSTexture, xGSTextureImpl>
+    class xGSTextureImpl : public xGSObjectImpl<xGSObjectBase<xGSTexture>, xGSTextureImpl>
     {
     public:
         xGSTextureImpl(xGSImpl *owner);
@@ -38,6 +38,8 @@ namespace xGS
         GSbool allocate(const GStexturedescription &desc);
 
         ID3D12Resource* texture() const { return p_texture; }
+
+        DXGI_FORMAT texformat() const { return p_texformat; }
 
         GSuint samples() const { return p_multisample; }
         GSenum format() const { return p_format; }
@@ -65,6 +67,7 @@ namespace xGS
         GSenum          p_texturetype;  // texture type: 1D, 2D, etc...
         GSenum          p_format;       // texture texel format
 
+        DXGI_FORMAT     p_texformat;
         GSint           p_bpp;          // format: BYTES per pixel
 
         ID3D12Resource *p_texture;
@@ -81,7 +84,7 @@ namespace xGS
         GSdword         p_lockaccess;   // LOCK: lock access
         GSint           p_locklayer;    // LOCK: locked texture layer (for array textures only)
         GSint           p_locklevel;    // LOCK: locked texture MIP level
-        char           *p_lockmemory;
+        ID3D12Resource *p_locktexture;
 
 #ifdef _DEBUG
         GSuint          p_boundasrt;    // texture currently is render target

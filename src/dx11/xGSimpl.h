@@ -22,14 +22,6 @@
 #include <unordered_map>
 
 
-struct IDXGISwapChain;
-struct ID3D11Device;
-struct ID3D11DeviceContext;
-struct ID3D11RenderTargetView;
-struct ID3D11DepthStencilView;
-struct ID3D11SamplerState;
-
-
 namespace xGS
 {
 
@@ -104,14 +96,18 @@ namespace xGS
     public:
         struct TextureFormatDescriptor
         {
-            GSint  bpp; // BYTES per pixel
+            GSint       bpp; // BYTES per pixel
+            DXGI_FORMAT format;
+
 
             TextureFormatDescriptor() :
-                bpp(0)
+                bpp(0),
+                format(DXGI_FORMAT_UNKNOWN)
             {}
 
-            TextureFormatDescriptor(GSint _bpp) :
-                bpp(_bpp)
+            TextureFormatDescriptor(GSint _bpp, DXGI_FORMAT _format) :
+                bpp(_bpp),
+                format(_format)
             {}
         };
 
@@ -119,7 +115,7 @@ namespace xGS
         //const GSpixelformat& DefaultRenderTargetFormat();
 
     private:
-        void AddTextureFormatDescriptor(GSvalue format);
+        void AddTextureFormatDescriptor(GSvalue format, GSint bpp, DXGI_FORMAT dxgifmt);
         void RenderTargetSize(GSsize &size);
 
         void CheckDefaultRTResize();

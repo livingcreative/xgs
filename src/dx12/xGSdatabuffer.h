@@ -23,7 +23,7 @@ namespace xGS
 {
 
     // data buffer object
-    class xGSDataBufferImpl : public xGSObjectImpl<xGSDataBuffer, xGSDataBufferImpl>
+    class xGSDataBufferImpl : public xGSObjectImpl<xGSObjectBase<xGSDataBuffer>, xGSDataBufferImpl>
     {
     public:
         xGSDataBufferImpl(xGSImpl *owner);

@@ -130,7 +130,7 @@ GSbool xGSStateImpl::allocate(const GSstatedescription &desc)
                     el.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
                     el.InstanceDataStepRate = 0;
                     el.SemanticIndex = inputelementscount;
-                    el.SemanticName = "TEXCOORD";
+                    el.SemanticName = "INPUT";
 
                     ++inputelementscount;
 
@@ -202,8 +202,8 @@ GSbool xGSStateImpl::allocate(const GSstatedescription &desc)
 
     ID3DBlob *err = nullptr;
 
-    ID3D11ShaderReflection *vsreflection = nullptr;
-    ID3D11ShaderReflection *psreflection = nullptr;
+    ID3D12ShaderReflection *vsreflection = nullptr;
+    ID3D12ShaderReflection *psreflection = nullptr;
 
     ID3DBlob *vsblob = nullptr;
     HRESULT res = D3DCompile(
@@ -219,17 +219,6 @@ GSbool xGSStateImpl::allocate(const GSstatedescription &desc)
             errtext.c_str()
         );
         ::Release(err);
-    }
-    if (vsblob) {
-        //p_owner->device()->CreateVertexShader(
-        //    vsblob->GetBufferPointer(), vsblob->GetBufferSize(), nullptr,
-        //    &p_vs
-        //);
-
-        //D3DReflect(
-        //    vsblob->GetBufferPointer(), vsblob->GetBufferSize(),
-        //    IID_ID3D11ShaderReflection, reinterpret_cast<void**>(&vsreflection)
-        //);
     }
 
     ID3DBlob *psblob = nullptr;
@@ -247,17 +236,6 @@ GSbool xGSStateImpl::allocate(const GSstatedescription &desc)
         );
         ::Release(err);
     }
-    if (psblob) {
-        //p_owner->device()->CreatePixelShader(
-        //    psblob->GetBufferPointer(), psblob->GetBufferSize(), nullptr,
-        //    &p_ps
-        //);
-
-        //D3DReflect(
-        //    psblob->GetBufferPointer(), psblob->GetBufferSize(),
-        //    IID_ID3D11ShaderReflection, reinterpret_cast<void**>(&psreflection)
-        //);
-    }
 
     // TODO: check status
     EnumAttributes();
@@ -270,6 +248,10 @@ GSbool xGSStateImpl::allocate(const GSstatedescription &desc)
     p_parameterslots.clear();
 
     GSuint currenttextureslot = 0;
+
+    D3D12_ROOT_PARAMETER parameters[64];
+    size_t numsamplers = 0;
+    D3D12_STATIC_SAMPLER_DESC samplers[16];
 
     // TODO: bind parameters to shaders
     const GSparameterlayout *paramset = desc.parameterlayout;
@@ -291,6 +273,9 @@ GSbool xGSStateImpl::allocate(const GSstatedescription &desc)
                 param->index
             };
 
+            D3D12_ROOT_PARAMETER &dxparam = parameters[p_parameterslots.size()];
+            dxparam.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL; // TODO: optimize this
+
             switch (param->type) {
                 case GSPD_CONSTANT:
                     slot.location = GS_DEFAULT;
@@ -298,6 +283,12 @@ GSbool xGSStateImpl::allocate(const GSstatedescription &desc)
                         p_owner->debug(DebugMessageLevel::Warning, "Requested parameter \"%s\" not found in program parameters\n", param->name);
                     }
                     ++set.constantcount;
+
+                    dxparam.ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+                    dxparam.Constants.Num32BitValues = 1; // TODO
+                    dxparam.Constants.RegisterSpace = 0;
+                    dxparam.Constants.ShaderRegister = 0;
+
                     break;
 
                 case GSPD_BLOCK:
@@ -305,6 +296,12 @@ GSbool xGSStateImpl::allocate(const GSstatedescription &desc)
                     if (slot.location == GS_DEFAULT) {
                         p_owner->debug(DebugMessageLevel::Warning, "Requested parameter \"%s\" not found in program parameters\n", param->name);
                     }
+
+                    // TODO: this should be packed into set table
+                    dxparam.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+                    dxparam.Descriptor.RegisterSpace = 0;
+                    dxparam.Descriptor.ShaderRegister = 1; // TODO: allocate regs
+
                     break;
 
                 case GSPD_TEXTURE: {
@@ -321,6 +318,11 @@ GSbool xGSStateImpl::allocate(const GSstatedescription &desc)
                             "Program texture slot \"%s\" with location %i got texture slot #%i\n",
                             param->name, location + param->index, currenttextureslot
                         );
+
+                        // TODO: this should be packed into set table
+                        dxparam.ParameterType = D3D12_ROOT_PARAMETER_TYPE_SRV;
+                        dxparam.Descriptor.RegisterSpace = 0;
+                        dxparam.Descriptor.ShaderRegister = 0;
 
                         ++currenttextureslot;
                         ++set.onepastlastsampler;
@@ -362,6 +364,35 @@ GSbool xGSStateImpl::allocate(const GSstatedescription &desc)
         //);
     }
 
+    ID3DBlob *rsblob = nullptr;
+
+    D3D12_ROOT_SIGNATURE_DESC rsdesc = {
+        UINT(p_parameterslots.size()), parameters,
+        UINT(numsamplers), samplers,
+        D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
+    };
+    res = D3D12SerializeRootSignature(&rsdesc, D3D_ROOT_SIGNATURE_VERSION_1, &rsblob, &err);
+    if (res != S_OK && err != nullptr) {
+        const char *text = reinterpret_cast<const char*>(err->GetBufferPointer());
+        string errtext(text, text + err->GetBufferSize());
+        p_owner->debug(
+            DebugMessageLevel::Error,
+            "Error serializing root signature: %s\n",
+            errtext.c_str()
+        );
+        ::Release(err);
+    }
+
+    res = p_owner->device()->CreateRootSignature(
+        0, rsblob->GetBufferPointer(), rsblob->GetBufferSize(),
+        IID_PPV_ARGS(&p_signature)
+    );
+    rsblob->Release();
+
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC psodesc = {};
+
+    res = p_owner->device()->CreateGraphicsPipelineState(&psodesc, IID_PPV_ARGS(&p_state));
+
     ::Release(vsblob);
     ::Release(psblob);
 
@@ -392,6 +423,7 @@ GSbool xGSStateImpl::allocate(const GSstatedescription &desc)
     }
     p_polygonoffset = desc.rasterizer.polygonoffset;
     p_multisample = desc.rasterizer.multisample != 0;
+
 
     return p_owner->error(GS_OK);
  }

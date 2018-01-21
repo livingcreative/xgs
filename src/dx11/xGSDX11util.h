@@ -37,14 +37,14 @@ namespace xGS
     };
 
 
-    inline int dx11_index_type(GSenum type)
+    inline DXGI_FORMAT dx11_index_type(GSenum type)
     {
         switch (type) {
-            case GS_INDEX_16: return 0;
-            case GS_INDEX_32: return 0;
+            case GS_INDEX_16: return DXGI_FORMAT_R16_UINT;
+            case GS_INDEX_32: return DXGI_FORMAT_R32_UINT;
         }
 
-        return 0;
+        return DXGI_FORMAT(0);
     }
 
     inline int dx11_primitive_type(GSenum type)

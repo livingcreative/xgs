@@ -26,17 +26,11 @@ namespace xGS
 {
 
     // geometry buffer object
-    class xGSGeometryBufferImpl : public xGSObjectImpl<xGSGeometryBufferBase, xGSGeometryBufferImpl>
+    class xGSGeometryBufferImpl : public xGSObjectBase<xGSGeometryBufferBase>
     {
     public:
         xGSGeometryBufferImpl(xGSImpl *owner);
         ~xGSGeometryBufferImpl() override;
-
-    public:
-        GSvalue xGSAPI GetValue(GSenum valuetype) override;
-
-        GSptr   xGSAPI Lock(GSenum locktype, GSdword access, void *lockdata) override;
-        GSbool  xGSAPI Unlock() override;
 
     public:
         GSbool allocate(const GSgeometrybufferdescription &desc);
@@ -44,17 +38,18 @@ namespace xGS
         ID3D11Buffer* vertexbuffer() const { return p_vertexbuffer; }
         ID3D11Buffer* indexbuffer() const { return p_indexbuffer; }
 
-        GSptr lock(GSenum locktype, size_t offset, size_t size);
-        void unlock();
+        GSptr LockImpl(GSenum locktype, size_t offset, size_t size);
+        void UnlockImpl();
 
-        void BeginImmediateDrawing();
-        void EndImmediateDrawing();
+        void BeginImmediateDrawingImpl();
+        void EndImmediateDrawingImpl();
 
         void ReleaseRendererResources();
 
     private:
         ID3D11Buffer *p_vertexbuffer;
         ID3D11Buffer *p_indexbuffer;
+
         char         *p_lockmemory;
         size_t        p_lockoffset;
         size_t        p_locksize;

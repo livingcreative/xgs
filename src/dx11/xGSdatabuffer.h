@@ -19,11 +19,14 @@
 #include <vector>
 
 
+struct ID3D11Buffer;
+
+
 namespace xGS
 {
 
     // data buffer object
-    class xGSDataBufferImpl : public xGSObjectImpl<xGSDataBuffer, xGSDataBufferImpl>
+    class xGSDataBufferImpl : public xGSObjectImpl<xGSObjectBase<xGSDataBuffer>, xGSDataBufferImpl>
     {
     public:
         xGSDataBufferImpl(xGSImpl *owner);
@@ -73,12 +76,14 @@ namespace xGS
         typedef std::vector<Uniform> UniformList;
 
     private:
-        GSuint           p_size;
+        ID3D11Buffer     *p_buffer;
 
-        UniformBlockList p_blocks;
-        UniformList      p_uniforms;
+        GSuint            p_size;
 
-        GSenum           p_locktype;
+        UniformBlockList  p_blocks;
+        UniformList       p_uniforms;
+
+        GSenum            p_locktype;
     };
 
 } // namespace xGS

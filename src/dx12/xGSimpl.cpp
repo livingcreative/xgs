@@ -161,7 +161,13 @@ void xGSImpl::CreateRendererImpl(const GSrendererdescription &desc)
     swapchaindesc.Windowed = true;
     swapchaindesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 
-    result = factory->CreateSwapChain(p_commandqueue, &swapchaindesc, &p_swapchain);
+    IDXGISwapChain *swapchain = nullptr;
+    result = factory->CreateSwapChain(p_commandqueue, &swapchaindesc, &swapchain);
+
+    if (swapchain) {
+        swapchain->QueryInterface(IID_PPV_ARGS(&p_swapchain));
+        swapchain->Release();
+    }
 
     factory->Release();
 
@@ -659,9 +665,35 @@ void xGSImpl::UploadBufferData(ID3D12Resource *source, ID3D12Resource *dest, siz
 {
     p_intcommandlist->Reset(p_intcmdallocator, nullptr);
 
-    TransitionBarrier(dest, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);
+    TransitionBarrier(p_intcommandlist, dest, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);
     p_intcommandlist->CopyBufferRegion(dest, destoffset, source, 0, destsize);
-    TransitionBarrier(dest, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ);
+    TransitionBarrier(p_intcommandlist, dest, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ);
+
+    p_intcommandlist->Close();
+
+    p_commandqueue->ExecuteCommandLists(1, reinterpret_cast<ID3D12CommandList**>(&p_intcommandlist));
+
+    WaitFence();
+}
+
+void xGSImpl::UploadTextureData(ID3D12Resource *source, ID3D12Resource *dest, size_t level, const D3D12_SUBRESOURCE_FOOTPRINT &footprint)
+{
+    p_intcommandlist->Reset(p_intcmdallocator, nullptr);
+
+    D3D12_TEXTURE_COPY_LOCATION dst = {
+        dest, D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX
+    };
+    dst.SubresourceIndex = UINT(level);
+
+    D3D12_TEXTURE_COPY_LOCATION src = {
+        source, D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT
+    };
+    src.PlacedFootprint.Offset = 0;
+    src.PlacedFootprint.Footprint = footprint;
+
+    TransitionBarrier(p_intcommandlist, dest, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);
+    p_intcommandlist->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
+    TransitionBarrier(p_intcommandlist, dest, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ);
 
     p_intcommandlist->Close();
 
@@ -727,7 +759,7 @@ void xGSImpl::RecreateDefaultRT()
     }
 
     // prepare current buffers for rendering
-    p_currentbuffer = 0;
+    p_currentbuffer = p_swapchain->GetCurrentBackBufferIndex();
     RTTransitionBarrier(false);
 }
 
@@ -774,7 +806,7 @@ void xGSImpl::RecreateDefaultRTDepthStencil()
     );
 
     TransitionBarrier(
-        p_depthstencil,
+        p_commandlist, p_depthstencil,
         D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE
     );
 }
@@ -816,7 +848,7 @@ D3D12_CPU_DESCRIPTOR_HANDLE xGSImpl::DepthStencilDescriptor() const
     return result;
 }
 
-void xGSImpl::TransitionBarrier(ID3D12Resource *resource, D3D12_RESOURCE_STATES before, D3D12_RESOURCE_STATES after)
+void xGSImpl::TransitionBarrier(ID3D12GraphicsCommandList *list, ID3D12Resource *resource, D3D12_RESOURCE_STATES before, D3D12_RESOURCE_STATES after)
 {
     D3D12_RESOURCE_BARRIER barrier = {
         D3D12_RESOURCE_BARRIER_TYPE_TRANSITION
@@ -825,12 +857,13 @@ void xGSImpl::TransitionBarrier(ID3D12Resource *resource, D3D12_RESOURCE_STATES 
     barrier.Transition.StateBefore = before;
     barrier.Transition.StateAfter = after;
 
-    p_commandlist->ResourceBarrier(1, &barrier);
+    list->ResourceBarrier(1, &barrier);
 }
 
 void xGSImpl::RTTransitionBarrier(bool topresent)
 {
     TransitionBarrier(
+        p_commandlist,
         p_buffers[p_currentbuffer],
         topresent ? D3D12_RESOURCE_STATE_RENDER_TARGET : D3D12_RESOURCE_STATE_PRESENT,
         topresent ? D3D12_RESOURCE_STATE_PRESENT : D3D12_RESOURCE_STATE_RENDER_TARGET

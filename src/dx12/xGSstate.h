@@ -28,7 +28,7 @@ namespace xGS
 {
 
     // program object
-    class xGSStateImpl : public xGSObjectImpl<xGSState, xGSStateImpl>
+    class xGSStateImpl : public xGSObjectImpl<xGSObjectBase<xGSState>, xGSStateImpl>
     {
     public:
         xGSStateImpl(xGSImpl *owner);
@@ -129,53 +129,51 @@ namespace xGS
         typedef std::vector<ParameterSlot> ParamSlotList;
 
     private:
-        //ID3D11InputLayout  *p_inputlayout;
+        ID3D12RootSignature *p_signature;
+        ID3D12PipelineState *p_state;
 
-        //ID3D11VertexShader *p_vs;
-        //ID3D11PixelShader  *p_ps;
+        AttributeList        p_attributes;
+        UniformList          p_uniforms;
+        UniformBlockList     p_uniformblocks;
 
-        AttributeList       p_attributes;
-        UniformList         p_uniforms;
-        UniformBlockList    p_uniformblocks;
+        InputSlotList        p_input;
+        size_t               p_primaryslot;
+        GSuint               p_inputavail;
 
-        InputSlotList       p_input;
-        size_t              p_primaryslot;
-        GSuint              p_inputavail;
+        ParamSetList         p_parametersets;
+        ParamSlotList        p_parameterslots;
 
-        ParamSetList        p_parametersets;
-        ParamSlotList       p_parameterslots;
-
-        StringList          p_feedback;
+        StringList           p_feedback;
 
         // static params set
-        GSParametersState   p_staticstate;
+        GSParametersState    p_staticstate;
 
         // fixed state params
-        GSbool              p_rasterizerdiscard;
-        GSbool              p_sampleshading;
-        int                 p_fill;
-        bool                p_cull;
-        float               p_pointsize;
-        bool                p_programpointsize;
-        int                 p_cullface;
-        bool                p_colormask;
-        bool                p_depthmask;
-        bool                p_depthtest;
-        int                 p_depthfunc;
-        bool                p_blendseparate;
-        bool                p_blend[GS_MAX_FB_COLORTARGETS];
-        int                 p_blendeq[GS_MAX_FB_COLORTARGETS];
-        int                 p_blendsrc[GS_MAX_FB_COLORTARGETS];
-        int                 p_blenddst[GS_MAX_FB_COLORTARGETS];
-        int                 p_blendeqalpha[GS_MAX_FB_COLORTARGETS];
-        int                 p_blendsrcalpha[GS_MAX_FB_COLORTARGETS];
-        int                 p_blenddstalpha[GS_MAX_FB_COLORTARGETS];
-        GSuint              p_polygonoffset;
-        bool                p_multisample;
+        GSbool               p_rasterizerdiscard;
+        GSbool               p_sampleshading;
+        int                  p_fill;
+        bool                 p_cull;
+        float                p_pointsize;
+        bool                 p_programpointsize;
+        int                  p_cullface;
+        bool                 p_colormask;
+        bool                 p_depthmask;
+        bool                 p_depthtest;
+        int                  p_depthfunc;
+        bool                 p_blendseparate;
+        bool                 p_blend[GS_MAX_FB_COLORTARGETS];
+        int                  p_blendeq[GS_MAX_FB_COLORTARGETS];
+        int                  p_blendsrc[GS_MAX_FB_COLORTARGETS];
+        int                  p_blenddst[GS_MAX_FB_COLORTARGETS];
+        int                  p_blendeqalpha[GS_MAX_FB_COLORTARGETS];
+        int                  p_blendsrcalpha[GS_MAX_FB_COLORTARGETS];
+        int                  p_blenddstalpha[GS_MAX_FB_COLORTARGETS];
+        GSuint               p_polygonoffset;
+        bool                 p_multisample;
 
         // output RT formats
-        GSenum              p_colorformats[GS_MAX_FB_COLORTARGETS];
-        GSenum              p_depthstencilformat;
+        GSenum               p_colorformats[GS_MAX_FB_COLORTARGETS];
+        GSenum               p_depthstencilformat;
     };
 
 } // namespace xGS

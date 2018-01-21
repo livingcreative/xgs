@@ -20,6 +20,7 @@ using namespace xGS;
 
 xGSDataBufferImpl::xGSDataBufferImpl(xGSImpl *owner) :
     xGSObjectImpl(owner),
+    p_buffer(nullptr),
     p_size(0),
     p_locktype(GS_NONE)
 {
@@ -118,6 +119,13 @@ GSbool xGSDataBufferImpl::allocate(const GSdatabufferdescription &desc)
     }
 
     // TODO: allocate DX11 data buffer
+    D3D11_BUFFER_DESC bufferdesc = {};
+    bufferdesc.Usage = D3D11_USAGE_DYNAMIC;
+    bufferdesc.ByteWidth = p_size;
+    bufferdesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+    bufferdesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+
+    p_owner->device()->CreateBuffer(&bufferdesc, nullptr, &p_buffer);
 
     return p_owner->error(GS_OK);
 }
@@ -218,4 +226,5 @@ GSbool xGSDataBufferImpl::Unlock()
 void xGSDataBufferImpl::ReleaseRendererResources()
 {
     // TODO: release DX11 data buffer
+    ::Release(p_buffer);
 }

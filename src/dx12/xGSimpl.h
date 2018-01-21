@@ -24,6 +24,8 @@
 
 namespace xGS
 {
+    class xGSTextureImpl;
+
 
     class xGSImpl : public xGSImplBase
     {
@@ -114,6 +116,7 @@ namespace xGS
         //const GSpixelformat& DefaultRenderTargetFormat();
 
         void UploadBufferData(ID3D12Resource *source, ID3D12Resource *dest, size_t destoffset, size_t destsize);
+        void UploadTextureData(ID3D12Resource *source, ID3D12Resource *dest, size_t level, const D3D12_SUBRESOURCE_FOOTPRINT &footprint);
 
     private:
         void AddTextureFormatDescriptor(GSvalue format, GSint bpp, DXGI_FORMAT dxgifmt);
@@ -127,7 +130,7 @@ namespace xGS
         D3D12_CPU_DESCRIPTOR_HANDLE RenderTargetDescriptor() const;
         D3D12_CPU_DESCRIPTOR_HANDLE DepthStencilDescriptor() const;
 
-        void TransitionBarrier(ID3D12Resource *resource, D3D12_RESOURCE_STATES before, D3D12_RESOURCE_STATES after);
+        void TransitionBarrier(ID3D12GraphicsCommandList *list, ID3D12Resource *resource, D3D12_RESOURCE_STATES before, D3D12_RESOURCE_STATES after);
         void RTTransitionBarrier(bool topresent);
 
         void WaitFence();
@@ -147,7 +150,7 @@ namespace xGS
     private:
         typedef std::unordered_map<GSvalue, TextureFormatDescriptor> TextureDescriptorsMap;
 
-        IDXGISwapChain              *p_swapchain;
+        IDXGISwapChain3             *p_swapchain;
         ID3D12Device                *p_device;
         ID3D12Fence                 *p_fence;
         HANDLE                       p_event;

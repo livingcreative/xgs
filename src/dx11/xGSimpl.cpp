@@ -69,8 +69,13 @@ void xGSImpl::CreateRendererImpl(const GSrendererdescription &desc)
     swapchaindesc.OutputWindow = HWND(desc.widget);
     swapchaindesc.Windowed = true;
 
+    UINT flags = 0;
+#ifdef _DEBUG
+    flags |= D3D11_CREATE_DEVICE_DEBUG;
+#endif
+
     HRESULT result = D3D11CreateDeviceAndSwapChain(
-        nullptr, D3D_DRIVER_TYPE_HARDWARE, 0, 0, nullptr, 0, D3D11_SDK_VERSION,
+        nullptr, D3D_DRIVER_TYPE_HARDWARE, 0, flags, nullptr, 0, D3D11_SDK_VERSION,
         &swapchaindesc, &p_swapchain, &p_device, nullptr, &p_context
     );
     if (result != S_OK) {
@@ -90,6 +95,11 @@ void xGSImpl::CreateRendererImpl(const GSrendererdescription &desc)
     // TODO: check errors
 
     p_context->OMSetRenderTargets(1, &p_defaultrt, p_defaultrtds);
+
+    AddTextureFormatDescriptor(GS_COLOR_RGBX, 4, DXGI_FORMAT_B8G8R8A8_UNORM);
+    AddTextureFormatDescriptor(GS_COLOR_S_RGBX, 4, DXGI_FORMAT_B8G8R8A8_UNORM_SRGB);
+    AddTextureFormatDescriptor(GS_COLOR_RGBA, 4, DXGI_FORMAT_B8G8R8A8_UNORM);
+    AddTextureFormatDescriptor(GS_COLOR_S_RGBA, 4, DXGI_FORMAT_B8G8R8A8_UNORM_SRGB);
 
     memset(p_timerqueries, 0, sizeof(p_timerqueries));
     p_timerindex = 0;
@@ -351,7 +361,7 @@ void xGSImpl::DrawImmediatePrimitives(xGSGeometryBufferImpl *buffer)
 
 void xGSImpl::BuildMIPsImpl(xGSTextureImpl *texture)
 {
-    // TODO: xGSImpl::BuildMIPsImpl
+    p_context->GenerateMips(texture->view());
 }
 
 void xGSImpl::CopyImageImpl(
@@ -437,12 +447,12 @@ GSbool xGSImpl::GetTextureFormatDescriptor(GSvalue format, TextureFormatDescript
 //}
 
 
-void xGSImpl::AddTextureFormatDescriptor(GSvalue format)
+void xGSImpl::AddTextureFormatDescriptor(GSvalue format, GSint bpp, DXGI_FORMAT dxgifmt)
 {
     // TODO: xGSImpl::AddTextureFormatDescriptor
     p_texturedescs.insert(std::make_pair(
         format,
-        TextureFormatDescriptor(0)
+        TextureFormatDescriptor(bpp, dxgifmt)
     ));
 }
 

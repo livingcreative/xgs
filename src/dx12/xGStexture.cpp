@@ -30,7 +30,8 @@ xGSTextureImpl::xGSTextureImpl(xGSImpl *owner) :
     p_multisample(GS_MULTISAMPLE_NONE),
     p_minlevel(0),
     p_maxlevel(1000),
-    p_locktype(GS_NONE)
+    p_locktype(GS_NONE),
+    p_locktexture(nullptr)
 {
 #ifdef _DEBUG
     p_boundasrt = 0;
@@ -87,6 +88,7 @@ GSbool xGSTextureImpl::allocate(const GStexturedescription &desc)
         return p_owner->error(GSE_INVALIDENUM);
     }
 
+    p_texformat = texdesc.format;
     p_bpp = texdesc.bpp;
 
     UINT bindflags =
@@ -183,7 +185,39 @@ GSptr xGSTextureImpl::Lock(GSenum locktype, GSdword access, GSint level, GSint l
     }
 
     // TODO: xGSTextureImpl::Lock
-    p_lockmemory = new char[p_width * p_height * p_bpp];
+
+    D3D12_HEAP_PROPERTIES heapprops = {
+        D3D12_HEAP_TYPE_UPLOAD,
+        D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+        D3D12_MEMORY_POOL_UNKNOWN,
+        1, 1
+    };
+
+    // this is also pasta, move to util
+    size_t size = 0;
+    switch (p_texturetype) {
+        case GS_TEXTYPE_1D:      size = p_width >> level; break;
+        case GS_TEXTYPE_2D:      size = umax(p_width >> level, 1u) * umax(p_height >> level, 1u); break;
+        case GS_TEXTYPE_3D:      size = umax(p_width >> level, 1u) * umax(p_height >> level, 1u) * umax(p_depth >> level, 1u); break;
+        case GS_TEXTYPE_CUBEMAP: size = umax(p_width >> level, 1u) * umax(p_height >> level, 1u); break;
+    }
+    size *= p_bpp;
+
+    D3D12_RESOURCE_DESC locktexturedesc = {
+        D3D12_RESOURCE_DIMENSION_BUFFER,
+        0, size, 1, 1, 1
+    };
+    locktexturedesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+    locktexturedesc.SampleDesc.Count = 1;
+
+    p_owner->device()->CreateCommittedResource(
+        &heapprops, D3D12_HEAP_FLAG_NONE, &locktexturedesc,
+        D3D12_RESOURCE_STATE_GENERIC_READ,
+        nullptr, IID_PPV_ARGS(&p_locktexture)
+    );
+
+    void *mem = nullptr;
+    p_locktexture->Map(level, nullptr, &mem);
 
     p_locktype = locktype;
     p_lockaccess = access;
@@ -192,7 +226,7 @@ GSptr xGSTextureImpl::Lock(GSenum locktype, GSdword access, GSint level, GSint l
 
     p_owner->error(GS_OK);
 
-    return p_lockmemory;
+    return mem;
 }
 
 GSbool xGSTextureImpl::Unlock()
@@ -223,9 +257,18 @@ void xGSTextureImpl::ReleaseRendererResources()
 void xGSTextureImpl::DoUnlock()
 {
     // TODO: xGSTextureImpl::DoUnlock
-    //p_owner->context()->UpdateSubresource(p_texture, 0, nullptr, p_lockmemory, p_width * p_bpp, 0);
+    p_locktexture->Unmap(p_locklevel, nullptr);
 
-    delete[] p_lockmemory;
+    D3D12_SUBRESOURCE_FOOTPRINT footprint = {
+        p_texformat,
+        umax(p_width >> p_locklevel, 1u),
+        umax(p_height >> p_locklevel, 1u),
+        umax(p_depth >> p_locklevel, 1u),
+        umax(p_width >> p_locklevel, 1u) * p_bpp
+    };
+    p_owner->UploadTextureData(p_locktexture, p_texture, p_locklevel, footprint);
+
+    ::Release(p_locktexture);
 
     p_lockaccess = 0;
     p_locklayer = 0;
