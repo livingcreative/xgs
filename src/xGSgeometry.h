@@ -22,9 +22,10 @@
 
 namespace xGS
 {
+    class IxGSGeometryBufferImpl;
 
     // geometry object
-    class xGSGeometryImpl : public xGSObjectImpl<xGSGeometry, xGSGeometryImpl>
+    class xGSGeometryImpl : public xGSObjectImpl<xGSObjectBase<xGSGeometry>, xGSGeometryImpl>
     {
     public:
         xGSGeometryImpl(xGSImpl *owner);
@@ -41,18 +42,18 @@ namespace xGS
     public:
         GSbool allocate(const GSgeometrydescription &desc);
 
-        GSenum                 type() const { return p_type; }
-        GSuint                 patchvertices() const { return p_patch_vertices; }
-        GSbool                 restart() const { return p_restart; }
-        GSuint                 restartindex() const { return p_restartindex; }
-        GSenum                 indexFormat() const { return p_indexformat; }
-        GSint                  vertexCount() const { return p_vertexcount; }
-        GSint                  indexCount() const { return p_indexcount; }
-        GSuint                 patchVertices() const { return p_patch_vertices; }
-        const GSptr            vertexPtr() const { return p_vertexmemory; }
-        const GSptr            indexPtr() const { return p_indexmemory; }
-        xGSGeometryBufferImpl* buffer() const { return p_buffer; }
-        GSuint                 baseVertex() const { return p_basevertex; }
+        GSenum                  type() const { return p_type; }
+        GSuint                  patchvertices() const { return p_patch_vertices; }
+        GSbool                  restart() const { return p_restart; }
+        GSuint                  restartindex() const { return p_restartindex; }
+        GSenum                  indexFormat() const { return p_indexformat; }
+        GSint                   vertexCount() const { return p_vertexcount; }
+        GSint                   indexCount() const { return p_indexcount; }
+        GSuint                  patchVertices() const { return p_patch_vertices; }
+        const GSptr             vertexPtr() const { return p_vertexmemory; }
+        const GSptr             indexPtr() const { return p_indexmemory; }
+        IxGSGeometryBufferImpl* buffer() const { return p_buffer; }
+        GSuint                  baseVertex() const { return p_basevertex; }
 
         void ReleaseRendererResources()
         {
@@ -66,23 +67,23 @@ namespace xGS
         void doUnlock();
 
     private:
-        GSenum                 p_type;         // primitive type
-        GSenum                 p_indexformat;  // index format
-        GSint                  p_vertexcount;
-        GSint                  p_indexcount;
-        GSuint                 p_patch_vertices;
-        GSbool                 p_restart;
-        GSuint                 p_restartindex;
+        GSenum                  p_type;         // primitive type
+        GSenum                  p_indexformat;  // index format
+        GSint                   p_vertexcount;
+        GSint                   p_indexcount;
+        GSuint                  p_patch_vertices;
+        GSbool                  p_restart;
+        GSuint                  p_restartindex;
 
-        GSenum                 p_locktype;     // lock type (none, vertices, indices)
-        GSptr                  p_lockpointer;  // current lock ptr (nullptr if there's no lock)
+        GSenum                  p_locktype;     // lock type (none, vertices, indices)
+        GSptr                   p_lockpointer;  // current lock ptr (nullptr if there's no lock)
 
-        GSuint                 p_basevertex;   // base vertex in buffer
-        GSptr                  p_vertexmemory; // starting vertex pointer (offset inside buffer or own memory)
-        GSptr                  p_indexmemory;  // starting index pointer (offset inside buffer or own memory)
+        GSuint                  p_basevertex;   // base vertex in buffer
+        GSptr                   p_vertexmemory; // starting vertex pointer (offset inside buffer or own memory)
+        GSptr                   p_indexmemory;  // starting index pointer (offset inside buffer or own memory)
 
-        xGSGeometryImpl       *p_sharedgeometry;
-        xGSGeometryBufferImpl *p_buffer;       // buffer in which geometry is allocated
+        xGSGeometryImpl        *p_sharedgeometry;
+        IxGSGeometryBufferImpl *p_buffer;       // buffer in which geometry is allocated
     };
 
 } // namespace xGS

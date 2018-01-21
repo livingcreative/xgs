@@ -21,24 +21,12 @@ using namespace c_util;
 
 
 xGSGeometryBufferImpl::xGSGeometryBufferImpl(xGSImpl *owner) :
-    xGSObjectImpl(owner),
     p_vertexbuffer(0),
     p_indexbuffer(0)
-{
-    p_owner->debug(DebugMessageLevel::Information, "GeometryBuffer object created\n");
-}
+{}
 
 xGSGeometryBufferImpl::~xGSGeometryBufferImpl()
-{
-    ReleaseRendererResources();
-    p_owner->debug(DebugMessageLevel::Information, "GeometryBuffer object destroyed\n");
-}
-
-GSvalue xGSGeometryBufferImpl::GetValue(GSenum valuetype)
-{
-    p_owner->error(GSE_UNIMPLEMENTED);
-    return 0;
-}
+{}
 
 GSbool xGSGeometryBufferImpl::allocate(const GSgeometrybufferdescription &desc)
 {
@@ -159,46 +147,9 @@ GSbool xGSGeometryBufferImpl::allocate(const GSgeometrybufferdescription &desc)
     return p_owner->error(GS_OK);
 }
 
-GSptr xGSGeometryBufferImpl::Lock(GSenum locktype, GSdword access, void *lockdata)
+GSptr xGSGeometryBufferImpl::LockImpl(GSenum locktype, size_t offset, size_t size)
 {
-    if (p_locktype || p_type == GS_GBTYPE_IMMEDIATE) {
-        p_owner->error(GSE_INVALIDOPERATION);
-        return nullptr;
-    }
-
-    if (locktype != GS_LOCK_VERTEXDATA && locktype != GS_LOCK_INDEXDATA) {
-        p_owner->error(GSE_INVALIDENUM);
-        return nullptr;
-    }
-
-    if (locktype == GS_LOCK_INDEXDATA && p_indexformat == GS_INDEX_NONE) {
-        p_owner->error(GSE_INVALIDVALUE);
-        return nullptr;
-    }
-
-    p_owner->error(GS_OK);
-    return lock(
-        locktype, 0,
-        locktype == GS_LOCK_VERTEXDATA ?
-          p_vertexdecl.buffer_size(p_vertexcount) :
-          index_buffer_size(p_indexformat, p_indexcount)
-     );
-}
-
-GSbool xGSGeometryBufferImpl::Unlock()
-{
-    if (p_locktype == GS_NONE || p_locktype == LOCK_IMMEDIATE) {
-        return p_owner->error(GSE_INVALIDOPERATION);
-    }
-
-    unlock();
-    p_locktype = GS_NONE;
-
-    return p_owner->error(GS_OK);
-}
-
-GSptr xGSGeometryBufferImpl::lock(GSenum locktype, size_t offset, size_t size)
-{
+    // NOTE: locktype must be valid here and all checks should be passed
     p_locktype = locktype;
 
     switch (locktype) {
@@ -224,7 +175,7 @@ GSptr xGSGeometryBufferImpl::lock(GSenum locktype, size_t offset, size_t size)
     return nullptr;
 }
 
-void xGSGeometryBufferImpl::unlock()
+void xGSGeometryBufferImpl::UnlockImpl()
 {
     switch (p_locktype) {
         case GS_LOCK_VERTEXDATA:
@@ -237,17 +188,11 @@ void xGSGeometryBufferImpl::unlock()
             glUnmapBuffer(GL_ELEMENT_ARRAY_BUFFER);
             break;
     }
+    p_locktype = GS_NONE;
 }
 
-void xGSGeometryBufferImpl::BeginImmediateDrawing()
+void xGSGeometryBufferImpl::BeginImmediateDrawingImpl()
 {
-    p_currentvertex = 0;
-    p_currentindex = 0;
-
-    p_primitives.clear();
-
-    p_locktype = LOCK_IMMEDIATE;
-
     glBindBuffer(GL_ARRAY_BUFFER, p_vertexbuffer);
     p_vertexptr = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
 
@@ -257,7 +202,7 @@ void xGSGeometryBufferImpl::BeginImmediateDrawing()
     }
 }
 
-void xGSGeometryBufferImpl::EndImmediateDrawing()
+void xGSGeometryBufferImpl::EndImmediateDrawingImpl()
 {
      glBindBuffer(GL_ARRAY_BUFFER, p_vertexbuffer);
      glUnmapBuffer(GL_ARRAY_BUFFER);
@@ -266,14 +211,6 @@ void xGSGeometryBufferImpl::EndImmediateDrawing()
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, p_indexbuffer);
         glUnmapBuffer(GL_ELEMENT_ARRAY_BUFFER);
      }
-
-     p_vertexptr = nullptr;
-     p_indexptr = nullptr;
-
-     // NOTE: primitives list isn't released here!!!
-     //         because after calling EndImmediateDrawing
-     //         implementation should issue rendering commands to
-     //         render cached primitives
 }
 
 void xGSGeometryBufferImpl::ReleaseRendererResources()

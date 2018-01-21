@@ -7,32 +7,32 @@
 
     https://github.com/livingcreative/xgs
 
-    opengl/xGSmain.cpp
+    xGSmain.cpp
         "main" source, exports the only function Create for xGS
         system object construction
+        and also includes other xGS sources
 */
 
 #include "xGSimpl.h"
 
-// "unity" build
-#include "xGSutil.cpp"
-#include "xGSGLutil.cpp"
+// "unity" build - platform implementation
 #include "xGSdatabuffer.cpp"
 #include "xGStexture.cpp"
 #include "xGSparameters.cpp"
 #include "xGSstate.cpp"
 #include "xGSinput.cpp"
-#include "xGSgeometrybufferbase.cpp"
 #include "xGSgeometrybuffer.cpp"
-#include "xGSgeometry.cpp"
 #include "xGSframebuffer.cpp"
-#include "xGSimplbase.cpp"
 #include "xGSimpl.cpp"
+#include "xGSplatform.cpp"
+
+// "unity" build - common
+#include "xGSutil.cpp"
+#include "xGSgeometrybufferbase.cpp"
+#include "IxGSgeometrybufferimpl.cpp"
+#include "xGSgeometry.cpp"
+#include "xGSimplbase.cpp"
 #include "IxGSimpl.cpp"
-
-#include "xGScontextplatform.h"
-#include "xGScontextplatform.cpp"
-
 
 using namespace xGS;
 

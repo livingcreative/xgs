@@ -163,7 +163,7 @@ template <> void xGSImplBase::RemoveObject(type *object)\
 }
 
 GS_ADD_REMOVE_OBJECT_IMPL(p_geometrylist, xGSGeometryImpl)
-GS_ADD_REMOVE_OBJECT_IMPL(p_geometrybufferlist, xGSGeometryBufferImpl)
+GS_ADD_REMOVE_OBJECT_IMPL(p_geometrybufferlist, IxGSGeometryBufferImpl)
 GS_ADD_REMOVE_OBJECT_IMPL(p_databufferlist, xGSDataBufferImpl)
 GS_ADD_REMOVE_OBJECT_IMPL(p_texturelist, xGSTextureImpl)
 GS_ADD_REMOVE_OBJECT_IMPL(p_framebufferlist, xGSFrameBufferImpl)

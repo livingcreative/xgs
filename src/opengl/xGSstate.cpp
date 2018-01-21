@@ -217,7 +217,8 @@ GSbool xGSStateImpl::allocate(const GSstatedescription &desc)
 
             switch (param->type) {
                 case GSPD_CONSTANT:
-                    slot.location = glGetUniformLocation(p_program, param->name);
+                    slot.location = param->location == GS_DEFAULT ?
+                        glGetUniformLocation(p_program, param->name) : param->location;
                     if (slot.location == GS_DEFAULT) {
                         p_owner->debug(DebugMessageLevel::Warning, "Requested parameter \"%s\" not found in program parameters\n", param->name);
                     }
@@ -225,18 +226,21 @@ GSbool xGSStateImpl::allocate(const GSstatedescription &desc)
                     break;
 
                 case GSPD_BLOCK:
-                    slot.location = glGetUniformBlockIndex(p_program, param->name);
+                    slot.location = param->location == GS_DEFAULT ?
+                        glGetUniformBlockIndex(p_program, param->name) : param->location;
                     if (slot.location == GS_DEFAULT) {
                         p_owner->debug(DebugMessageLevel::Warning, "Requested parameter \"%s\" not found in program parameters\n", param->name);
                     }
                     break;
 
                 case GSPD_TEXTURE: {
-                    GSint location = glGetUniformLocation(p_program, param->name);
+                    GSint location = param->location == GS_DEFAULT ?
+                        glGetUniformLocation(p_program, param->name) : param->location;
                     if (location == GS_DEFAULT) {
                         p_owner->debug(DebugMessageLevel::Warning, "Requested parameter \"%s\" not found in program parameters\n", param->name);
                     } else {
                         slot.location = currenttextureslot - set.firstsampler;
+
                         // TODO: be sure that glProgramUniform1i available
                         glProgramUniform1i(p_program, location + param->index, currenttextureslot);
 
@@ -297,7 +301,7 @@ GSbool xGSStateImpl::allocate(const GSstatedescription &desc)
                 setformat(is.decl, binding, is.divisor);
                 if (is.buffer) {
                     glBindVertexBuffer(
-                        binding, is.buffer->getVertexBufferID(), 0,
+                        binding, is.buffer->vertexbuffer(), 0,
                         is.buffer->vertexDecl().buffer_size()
                     );
                 }
@@ -307,7 +311,7 @@ GSbool xGSStateImpl::allocate(const GSstatedescription &desc)
         } else {
             // but if all input slots are static, VAO built here to attach input buffers
             for (auto &is : p_input) {
-                glBindBuffer(GL_ARRAY_BUFFER, is.buffer->getVertexBufferID());
+                glBindBuffer(GL_ARRAY_BUFFER, is.buffer->vertexbuffer());
                 setarrays(is.decl, is.divisor, nullptr);
             }
         }
@@ -315,7 +319,7 @@ GSbool xGSStateImpl::allocate(const GSstatedescription &desc)
         if (p_primaryslot != GS_UNDEFINED && p_input[p_primaryslot].buffer) {
             glBindBuffer(
                 GL_ELEMENT_ARRAY_BUFFER,
-                p_input[p_primaryslot].buffer->getIndexBufferID()
+                p_input[p_primaryslot].buffer->indexbuffer()
             );
         }
 
@@ -407,7 +411,7 @@ void xGSStateImpl::setformat(const GSvertexdecl &decl, GSuint binding, GSuint di
 
     for (auto const &i : decl.declaration())
     {
-        GLint attrib = attribLocation(i.name);
+        GLint attrib = i.index == GS_DEFAULT ? attribLocation(i.name) : i.index;
         if (attrib != -1) {
             glEnableVertexAttribArray(attrib);
             glVertexAttribFormat(attrib, vertex_component_count(i), GL_FLOAT, GL_FALSE, offset);
@@ -704,7 +708,7 @@ void xGSStateImpl::EnumUniformBlocks()
         p_uniformblocks.push_back(u);
 
         // 1:1 index to binding point mapping
-        glUniformBlockBinding(p_program, n, n);
+        //glUniformBlockBinding(p_program, n, n);
 
 #ifdef _DEBUG
         p_owner->debug(

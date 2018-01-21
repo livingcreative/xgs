@@ -19,17 +19,43 @@
 namespace xGS
 {
 
-    template <typename baseT, typename selfT>
-    class xGSObjectImpl : public xGSIUnknownImpl<baseT>
+    template <typename T>
+    class xGSObjectBase : public xGSIUnknownImpl<T>
     {
     public:
-        xGSObjectImpl() :
+        xGSObjectBase() :
+            p_objecttype(GS_NONE),
             p_owner(nullptr)
         {}
 
-        xGSObjectImpl(xGSImpl *owner) :
+        xGSObjectBase(xGSImpl *owner) :
+            p_objecttype(GS_NONE),
             p_owner(owner)
+        {}
+
+        ~xGSObjectBase() override
+        {}
+
+        void DetachFromRenderer()
         {
+            p_owner = nullptr;
+        }
+
+        GSenum objecttype() const { return p_objecttype; }
+
+    protected:
+        GSenum   p_objecttype;
+        xGSImpl *p_owner;
+    };
+
+    template <typename baseT, typename selfT>
+    class xGSObjectImpl : public baseT
+    {
+    public:
+        xGSObjectImpl(xGSImpl *owner) :
+            baseT(owner)
+        {
+            p_owner = owner;
             p_owner->AddObject<selfT>(static_cast<selfT*>(this));
         }
 
@@ -40,13 +66,6 @@ namespace xGS
             }
         }
 
-        void DetachFromRenderer()
-        {
-            p_owner = nullptr;
-        }
-
-        GSenum objecttype() const { return p_objecttype; }
-
         static selfT* create(xGSImpl *owner, GSenum type)
         {
             selfT *result = new selfT(owner);
@@ -54,13 +73,9 @@ namespace xGS
             result->AddRef();
             return result;
         }
-
-    protected:
-        GSenum   p_objecttype;
-        xGSImpl *p_owner;
     };
 
-    class xGSUnknownObjectImpl : public xGSObjectImpl<xGSObject, xGSUnknownObjectImpl>
+    class xGSUnknownObjectImpl : public xGSObjectImpl<xGSObjectBase<xGSObject>, xGSUnknownObjectImpl>
     {};
 
 } // namespace xGS

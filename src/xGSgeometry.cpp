@@ -12,7 +12,7 @@
 */
 
 #include "xGSgeometry.h"
-#include "xGSgeometrybuffer.h"
+#include "IxGSgeometrybufferimpl.h"
 
 
 using namespace xGS;
@@ -94,7 +94,7 @@ GSbool xGSGeometryImpl::allocate(const GSgeometrydescription &desc)
             return p_owner->error(GSE_INVALIDOBJECT);
         }
 
-        xGSGeometryBufferImpl *bufferimpl = static_cast<xGSGeometryBufferImpl*>(desc.buffer);
+        IxGSGeometryBufferImpl *bufferimpl = static_cast<IxGSGeometryBufferImpl*>(desc.buffer);
         GSenum indexformat = bufferimpl->indexFormat();
 
         if (bufferimpl->type() == GS_GBTYPE_IMMEDIATE) {
@@ -192,7 +192,7 @@ GSptr xGSGeometryImpl::Lock(GSenum locktype, GSdword access, void *lockdata)
     switch (locktype) {
         case GS_LOCK_VERTEXDATA:
             p_locktype = locktype;
-            p_lockpointer = p_buffer->lock(
+            p_lockpointer = p_buffer->LockImpl(
                 locktype,
                 size_t(p_vertexmemory),
                 p_buffer->vertexDecl().buffer_size(p_vertexcount)
@@ -201,7 +201,7 @@ GSptr xGSGeometryImpl::Lock(GSenum locktype, GSdword access, void *lockdata)
 
         case GS_LOCK_INDEXDATA:
             p_locktype = locktype;
-            p_lockpointer = p_buffer->lock(
+            p_lockpointer = p_buffer->LockImpl(
                 locktype,
                 size_t(p_indexmemory),
                 index_buffer_size(p_indexformat, p_indexcount)
@@ -251,7 +251,7 @@ bool xGSGeometryImpl::checkAlloc(GSenum indexformat)
 void xGSGeometryImpl::doUnlock()
 {
     if (p_buffer) {
-        p_buffer->unlock();
+        p_buffer->UnlockImpl();
     }
 
     p_locktype = GS_NONE;

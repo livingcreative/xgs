@@ -525,7 +525,7 @@ void xGSImpl::BeginCaptureImpl(GSenum mode)
 {
     glBeginQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN, p_capturequery);
 
-    glBindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, 0, p_capturebuffer->getVertexBufferID());
+    glBindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, 0, p_capturebuffer->vertexbuffer());
     glBeginTransformFeedback(gl_primitive_type(mode));
 }
 
@@ -592,7 +592,7 @@ static bool BindCopyObject(xGSObject *obj, GLenum copytarget)
     switch (type) {
         case GS_OBJECTTYPE_GEOMETRYBUFFER: {
             xGSGeometryBufferImpl *impl = static_cast<xGSGeometryBufferImpl*>(obj);
-            objectid = impl->getVertexBufferID();
+            objectid = impl->vertexbuffer();
             break;
         }
 
@@ -651,7 +651,7 @@ void xGSImpl::BufferCommitmentImpl(xGSObject *buffer, GSuint offset, GSuint size
         case GS_OBJECTTYPE_GEOMETRYBUFFER: {
             xGSGeometryBufferImpl *impl = static_cast<xGSGeometryBufferImpl*>(buffer);
             // TODO: consider flags to index buffer commit
-            objectid = impl->getVertexBufferID();
+            objectid = impl->vertexbuffer();
             target = GL_ARRAY_BUFFER;
             break;
         }
@@ -688,8 +688,8 @@ void xGSImpl::BufferCommitmentImpl(xGSObject *buffer, GSuint offset, GSuint size
 void xGSImpl::GeometryBufferCommitmentImpl(xGSGeometryBufferImpl *buffer)
 {
     // TODO: this breaks current input binding, resolve it
-    glBindBuffer(GL_ARRAY_BUFFER, buffer->getVertexBufferID());
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer->getIndexBufferID());
+    glBindBuffer(GL_ARRAY_BUFFER, buffer->vertexbuffer());
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer->indexbuffer());
 }
 
 void xGSImpl::GeometryBufferCommitmentGeometry(xGSGeometryImpl *geometry, GSuint vertexsize, GSuint indexsize, GSbool commit)

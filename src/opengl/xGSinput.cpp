@@ -71,7 +71,7 @@ GSbool xGSInputImpl::allocate(const GSinputdescription &desc)
 
         // TODO: check layout match
 
-        if (GLuint ib = buffer->getIndexBufferID()) {
+        if (GLuint ib = buffer->indexbuffer()) {
             p_indexbuffer = ib;
             ++elementbuffers;
         }
@@ -96,7 +96,7 @@ GSbool xGSInputImpl::allocate(const GSinputdescription &desc)
         for (auto b : p_buffers) {
             if (b) {
                 b->AddRef();
-                p_vertexbuffers.push_back(b->getVertexBufferID());
+                p_vertexbuffers.push_back(b->vertexbuffer());
                 p_strides.push_back(b->vertexDecl().buffer_size());
                 p_slots.push_back(slot++);
             }
@@ -117,7 +117,7 @@ GSbool xGSInputImpl::allocate(const GSinputdescription &desc)
                 buffer = p_buffers[n];
                 buffer->AddRef();
             }
-            glBindBuffer(GL_ARRAY_BUFFER, buffer->getVertexBufferID());
+            glBindBuffer(GL_ARRAY_BUFFER, buffer->vertexbuffer());
             p_state->setarrays(slot.decl, slot.divisor, nullptr);
         }
 

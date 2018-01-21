@@ -23,29 +23,23 @@ namespace xGS
 {
 
     // geometry buffer object
-    class xGSGeometryBufferImpl : public xGSObjectImpl<xGSGeometryBufferBase, xGSGeometryBufferImpl>
+    class xGSGeometryBufferImpl : public xGSObjectBase<xGSGeometryBufferBase>
     {
     public:
         xGSGeometryBufferImpl(xGSImpl *owner);
         ~xGSGeometryBufferImpl() override;
 
     public:
-        GSvalue xGSAPI GetValue(GSenum valuetype) override;
-
-        GSptr   xGSAPI Lock(GSenum locktype, GSdword access, void *lockdata) override;
-        GSbool  xGSAPI Unlock() override;
-
-    public:
         GSbool allocate(const GSgeometrybufferdescription &desc);
 
-        GLuint getVertexBufferID() const { return p_vertexbuffer; }
-        GLuint getIndexBufferID() const { return p_indexbuffer; }
+        GLuint vertexbuffer() const { return p_vertexbuffer; }
+        GLuint indexbuffer() const { return p_indexbuffer; }
 
-        GSptr lock(GSenum locktype, size_t offset, size_t size);
-        void unlock();
+        GSptr LockImpl(GSenum locktype, size_t offset, size_t size);
+        void UnlockImpl();
 
-        void BeginImmediateDrawing();
-        void EndImmediateDrawing();
+        void BeginImmediateDrawingImpl();
+        void EndImmediateDrawingImpl();
 
         void ReleaseRendererResources();
 

@@ -15,7 +15,7 @@
 
 #include "IxGSimpl.h"
 #include "xGSgeometry.h"
-#include "xGSgeometrybuffer.h"
+#include "IxGSgeometrybufferimpl.h"
 #include "xGSdatabuffer.h"
 #include "xGStexture.h"
 #include "xGSframebuffer.h"
@@ -104,7 +104,7 @@ GSbool IxGSImpl::CreateObject(GSenum type, const void *desc, void **result)
     // TODO: make refcounting and adding to object list only after successful creation
     switch (type) {
         GS_CREATE_OBJECT(GS_OBJECTTYPE_GEOMETRY, xGSGeometryImpl, GSgeometrydescription)
-        GS_CREATE_OBJECT(GS_OBJECTTYPE_GEOMETRYBUFFER, xGSGeometryBufferImpl, GSgeometrybufferdescription)
+        GS_CREATE_OBJECT(GS_OBJECTTYPE_GEOMETRYBUFFER, IxGSGeometryBufferImpl, GSgeometrybufferdescription)
         GS_CREATE_OBJECT(GS_OBJECTTYPE_DATABUFFER, xGSDataBufferImpl, GSdatabufferdescription)
         GS_CREATE_OBJECT(GS_OBJECTTYPE_TEXTURE, xGSTextureImpl, GStexturedescription)
         GS_CREATE_OBJECT(GS_OBJECTTYPE_FRAMEBUFFER, xGSFrameBufferImpl, GSframebufferdescription)
@@ -393,7 +393,7 @@ GSbool IxGSImpl::BeginCapture(GSenum mode, IxGSGeometryBuffer buffer)
         return error(GSE_INVALIDOBJECT);
     }
 
-    xGSGeometryBufferImpl *bufferimpl = static_cast<xGSGeometryBufferImpl*>(buffer);
+    IxGSGeometryBufferImpl *bufferimpl = static_cast<IxGSGeometryBufferImpl*>(buffer);
 
     p_capturebuffer = bufferimpl;
     p_capturebuffer->AddRef();
@@ -430,7 +430,7 @@ GSbool IxGSImpl::BeginImmediateDrawing(IxGSGeometryBuffer buffer, GSuint flags)
         return error(GSE_INVALIDOBJECT);
     }
 
-    xGSGeometryBufferImpl *bufferimpl = static_cast<xGSGeometryBufferImpl*>(buffer);
+    IxGSGeometryBufferImpl *bufferimpl = static_cast<IxGSGeometryBufferImpl*>(buffer);
     if (bufferimpl->type() != GS_GBTYPE_IMMEDIATE) {
         return error(GSE_INVALIDOBJECT);
     }
@@ -459,7 +459,7 @@ GSbool IxGSImpl::BeginImmediateDrawing(IxGSGeometryBuffer buffer, GSuint flags)
     p_immediatebuffer = bufferimpl;
     p_immediatebuffer->AddRef();
 
-    p_immediatebuffer->BeginImmediateDrawing();
+    bufferimpl->BeginImmediateDrawing();
 
     return error(GS_OK);
 }
@@ -476,10 +476,13 @@ GSbool IxGSImpl::ImmediatePrimitive(GSenum type, GSuint vertexcount, GSuint inde
     );
 
     if (!flushnotneeded) {
+        // TODO: this cast is not very nice...
+        IxGSGeometryBufferImpl *bufferimpl = static_cast<IxGSGeometryBufferImpl*>(p_immediatebuffer);
+
         // requested primitive can not be added, try to flush buffer
-        p_immediatebuffer->EndImmediateDrawing();
+        bufferimpl->EndImmediateDrawing();
         DrawImmediatePrimitives(p_immediatebuffer);
-        p_immediatebuffer->BeginImmediateDrawing();
+        bufferimpl->BeginImmediateDrawing();
 
         if (!p_immediatebuffer->EmitPrimitive(type, vertexcount, indexcount, flags, primitive)) {
             // primitive can not be added at all
@@ -496,7 +499,10 @@ GSbool IxGSImpl::EndImmediateDrawing()
         return GS_FALSE;
     }
 
-    p_immediatebuffer->EndImmediateDrawing();
+    // TODO: this cast is not very nice...
+    IxGSGeometryBufferImpl *bufferimpl = static_cast<IxGSGeometryBufferImpl*>(p_immediatebuffer);
+
+    bufferimpl->EndImmediateDrawing();
     DrawImmediatePrimitives(p_immediatebuffer);
 
     p_immediatebuffer->Release();

@@ -22,7 +22,7 @@ namespace xGS
 {
 
     // texture object
-    class xGSTextureImpl : public xGSObjectImpl<xGSTexture, xGSTextureImpl>
+    class xGSTextureImpl : public xGSObjectImpl<xGSObjectBase<xGSTexture>, xGSTextureImpl>
     {
     public:
         xGSTextureImpl(xGSImpl *owner);

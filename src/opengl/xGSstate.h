@@ -29,7 +29,7 @@ namespace xGS
 {
 
     // program object
-    class xGSStateImpl : public xGSObjectImpl<xGSState, xGSStateImpl>
+    class xGSStateImpl : public xGSObjectImpl<xGSObjectBase<xGSState>, xGSStateImpl>
     {
     public:
         xGSStateImpl(xGSImpl *owner);
