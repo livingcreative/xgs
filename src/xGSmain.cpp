@@ -16,6 +16,7 @@
 #include "xGSimpl.h"
 
 // "unity" build - platform implementation
+#include "xGSplatform.cpp"
 #include "xGSdatabuffer.cpp"
 #include "xGStexture.cpp"
 #include "xGSparameters.cpp"
@@ -24,7 +25,6 @@
 #include "xGSgeometrybuffer.cpp"
 #include "xGSframebuffer.cpp"
 #include "xGSimpl.cpp"
-#include "xGSplatform.cpp"
 
 // "unity" build - common
 #include "xGSutil.cpp"

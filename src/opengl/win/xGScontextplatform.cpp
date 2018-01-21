@@ -11,11 +11,13 @@
         xGScontext class implementation
 */
 
+#include "kcommon/c_util.h"
+#include "GL/wglew.h"
 #include "xGScontextplatform.h"
 #include "xGSdefaultcontext.h"
-#include "GL/wglew.h"
 
 
+using namespace c_util;
 using namespace xGS;
 
 
