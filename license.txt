@@ -1,6 +1,6 @@
 ﻿xgs 3D Graphics API layer
 
-Copyright (C) 2015-2016, livingcreative (https://github.com/livingcreative)
+Copyright (C) 2015-2018, livingcreative (https://github.com/livingcreative)
 
 All rights reserved.
 

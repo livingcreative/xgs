@@ -83,7 +83,7 @@ See [wiki example](https://github.com/livingcreative/xgs/wiki/Examples#1-triangl
 ## Copyright and licensing
 xgs 3D Graphics API layer
 
-Copyright (C) 2015 – 2017, livingcreative (https://github.com/livingcreative)   
+Copyright (C) 2015 – 2018, livingcreative (https://github.com/livingcreative)   
 All rights reserved.
 
 Redistribution and use in source and/or binary forms, with or without 
