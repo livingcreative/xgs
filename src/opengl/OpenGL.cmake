@@ -29,17 +29,18 @@ set(HEADERS
 # OpenGL implementation specific sources
 set(SOURCES
 	${SOURCES}
-	opengl/xGSmain.cpp
+	xGSmain.cpp
 
-	# xGSdatabuffer.cpp
-	# xGSframebuffer.cpp
-	# xGSgeometrybuffer.cpp
-	# xGSGLutil.cpp
-	# xGSimpl.cpp
-	# xGSinput.cpp
-	# xGSparameters.cpp
-	# xGSstate.cpp
-	# xGStexture.cpp
+	# opengl/xGSdatabuffer.cpp
+	# opengl/xGSframebuffer.cpp
+	# opengl/xGSgeometrybuffer.cpp
+	# opengl/xGSGLutil.cpp
+	# opengl/xGSimpl.cpp
+	# opengl/xGSinput.cpp
+	# opengl/xGSparameters.cpp
+    # opengl/xGSplatform.cpp
+	# opengl/xGSstate.cpp
+	# opengl/xGStexture.cpp
 )
 
 # OpenGL implementation additional include dirs
