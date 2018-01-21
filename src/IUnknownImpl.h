@@ -45,7 +45,7 @@ namespace xGS
             return p_refcount;
         }
 
-    protected:
+    private:
         unsigned int p_refcount;
     };
 
