@@ -1,4 +1,4 @@
-﻿#
+#
 #      xGS 3D Low-level rendering API
 #
 #  Low-level 3D rendering wrapper API with multiple back-end support
