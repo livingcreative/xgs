@@ -35,6 +35,9 @@ namespace xGS
     struct GScaps
     {
         // TODO: define caps for DX12 implementation
+
+        // TODO: this is temp. field for DataBuffer implementation
+        GSuint ubo_alignment;
     };
 
 

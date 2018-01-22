@@ -16,7 +16,7 @@
 #include "IxGSimpl.h"
 #include "xGSgeometry.h"
 #include "IxGSgeometrybufferimpl.h"
-#include "xGSdatabuffer.h"
+#include "IxGSdatabufferimpl.h"
 #include "xGStexture.h"
 #include "xGSframebuffer.h"
 #include "xGSstate.h"
@@ -105,7 +105,7 @@ GSbool IxGSImpl::CreateObject(GSenum type, const void *desc, void **result)
     switch (type) {
         GS_CREATE_OBJECT(GS_OBJECTTYPE_GEOMETRY, xGSGeometryImpl, GSgeometrydescription)
         GS_CREATE_OBJECT(GS_OBJECTTYPE_GEOMETRYBUFFER, IxGSGeometryBufferImpl, GSgeometrybufferdescription)
-        GS_CREATE_OBJECT(GS_OBJECTTYPE_DATABUFFER, xGSDataBufferImpl, GSdatabufferdescription)
+        GS_CREATE_OBJECT(GS_OBJECTTYPE_DATABUFFER, IxGSDataBufferImpl, GSdatabufferdescription)
         GS_CREATE_OBJECT(GS_OBJECTTYPE_TEXTURE, xGSTextureImpl, GStexturedescription)
         GS_CREATE_OBJECT(GS_OBJECTTYPE_FRAMEBUFFER, xGSFrameBufferImpl, GSframebufferdescription)
         GS_CREATE_OBJECT(GS_OBJECTTYPE_STATE, xGSStateImpl, GSstatedescription)

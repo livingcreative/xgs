@@ -30,6 +30,8 @@
 #include "xGSutil.cpp"
 #include "xGSgeometrybufferbase.cpp"
 #include "IxGSgeometrybufferimpl.cpp"
+#include "xGSdatabufferbase.cpp"
+#include "IxGSdatabufferimpl.cpp"
 #include "xGSgeometry.cpp"
 #include "xGSimplbase.cpp"
 #include "IxGSimpl.cpp"
