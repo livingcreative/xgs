@@ -21,6 +21,7 @@ using namespace c_util;
 
 
 xGSGeometryBufferImpl::xGSGeometryBufferImpl(xGSImpl *owner) :
+    xGSObjectBase(owner),
     p_vertexbuffer(0),
     p_indexbuffer(0)
 {}

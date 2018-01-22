@@ -25,6 +25,7 @@ namespace xGS
         IxGSGeometryBufferImpl(xGSImpl *owner);
         ~IxGSGeometryBufferImpl() override;
 
+    public:
         GSvalue xGSAPI GetValue(GSenum valuetype) override;
 
         GSptr   xGSAPI Lock(GSenum locktype, GSdword access, void *lockdata) override;
