@@ -37,6 +37,9 @@ namespace xGS
     public:
         GSbool allocate(const GStexturedescription &desc);
 
+        // TODO: this is temp. hack, see IxGSFrameBufferImpl allocate() note
+        int getID() const { return int(p_texture != nullptr); }
+
         ID3D12Resource* texture() const { return p_texture; }
 
         DXGI_FORMAT texformat() const { return p_texformat; }
