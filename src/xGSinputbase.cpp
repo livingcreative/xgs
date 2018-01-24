@@ -1,4 +1,4 @@
-/*
+﻿/*
         xGS 3D Low-level rendering API
 
     Low-level 3D rendering wrapper API with multiple back-end support
@@ -7,17 +7,18 @@
 
     https://github.com/livingcreative/xgs
 
-    xGSdatabufferbase.cpp
-        DataBuffer object implementation base class
+    xGSinputbase.cpp
+        Input object implementation base class
 */
 
-#include "xGSdatabufferbase.h"
+#include "xGSinputbase.h"
 
 
 using namespace xGS;
 
 
-xGSDataBufferBase::xGSDataBufferBase() :
-    p_size(0),
-    p_locktype(GS_NONE)
+xGSInputBase::xGSInputBase() :
+    p_state(nullptr),
+    p_primarybuffer(nullptr),
+    p_buffers()
 {}

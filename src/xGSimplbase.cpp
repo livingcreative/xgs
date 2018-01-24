@@ -168,7 +168,7 @@ GS_ADD_REMOVE_OBJECT_IMPL(p_databufferlist, IxGSDataBufferImpl)
 GS_ADD_REMOVE_OBJECT_IMPL(p_texturelist, xGSTextureImpl)
 GS_ADD_REMOVE_OBJECT_IMPL(p_framebufferlist, IxGSFrameBufferImpl)
 GS_ADD_REMOVE_OBJECT_IMPL(p_statelist, xGSStateImpl)
-GS_ADD_REMOVE_OBJECT_IMPL(p_inputlist, xGSInputImpl)
+GS_ADD_REMOVE_OBJECT_IMPL(p_inputlist, IxGSInputImpl)
 GS_ADD_REMOVE_OBJECT_IMPL(p_parameterslist, xGSParametersImpl)
 
 #undef GS_ADD_REMOVE_OBJECT_IMPL

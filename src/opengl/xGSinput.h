@@ -15,52 +15,35 @@
 #pragma once
 
 #include "xGSobject.h"
-#include "glplatform.h"
-#include <vector>
-#include <unordered_map>
+#include "xGSinputbase.h"
 
 
 namespace xGS
 {
 
-    class xGSStateImpl;
-    class xGSGeometryImpl;
-    class xGSGeometryBufferImpl;
-
-
     // input object
-    class xGSInputImpl : public xGSObjectImpl<xGSObjectBase<xGSInput>, xGSInputImpl>
+    class xGSInputImpl : public xGSObjectBase<xGSInputBase>
     {
     public:
         xGSInputImpl(xGSImpl *owner);
         ~xGSInputImpl() override;
 
     public:
-        GSbool allocate(const GSinputdescription &desc);
-
-        xGSStateImpl* state() const { return p_state; }
-        GSuint bufferCount() const { return GSuint(p_buffers.size()); }
-        xGSGeometryBufferImpl* buffer(GSuint index) const { return p_buffers[index]; }
-
-        xGSGeometryBufferImpl* primaryBuffer() const { return p_primarybuffer; }
+        GSbool AllocateImpl(GSuint elementbuffers);
 
         void apply(const GScaps &caps);
 
         void ReleaseRendererResources();
 
     private:
-        typedef std::vector<xGSGeometryBufferImpl*> GeometryBufferList;
         typedef std::vector<GLuint> GLuintList;
 
     private:
-        xGSStateImpl          *p_state;
-        xGSGeometryBufferImpl *p_primarybuffer;
-        GeometryBufferList     p_buffers;
-        GLuintList             p_vertexbuffers;
-        GLuintList             p_strides;
-        GLuintList             p_slots;
-        GLuint                 p_indexbuffer;
-        GLuint                 p_vertexarray;
+        GLuintList p_vertexbuffers;
+        GLuintList p_strides;
+        GLuintList p_slots;
+        GLuint     p_indexbuffer;
+        GLuint     p_vertexarray;
     };
 
 } // namespace xGS

@@ -12,7 +12,6 @@
 */
 
 #include "xGSdatabuffer.h"
-#include "xGSstate.h"
 
 
 using namespace xGS;
