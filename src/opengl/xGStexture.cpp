@@ -20,68 +20,17 @@ using namespace c_util;
 
 
 xGSTextureImpl::xGSTextureImpl(xGSImpl *owner) :
-    xGSObjectImpl(owner),
-    p_texturetype(GS_TEXTYPE_EMPTY),
-    p_width(0),
-    p_height(0),
-    p_depth(0),
-    p_layers(0),
-    p_multisample(GS_MULTISAMPLE_NONE),
-    p_minlevel(0),
-    p_maxlevel(1000),
-    p_locktype(GS_NONE),
+    xGSObjectBase(owner),
     p_texture(0),
     p_buffer(0)
-{
-#ifdef _DEBUG
-    p_boundasrt = 0;
-#endif
-    p_owner->debug(DebugMessageLevel::Information, "Texture object created\n");
-}
+{}
 
 xGSTextureImpl::~xGSTextureImpl()
+{}
+
+GSbool xGSTextureImpl::AllocateImpl()
 {
-    ReleaseRendererResources();
-    p_owner->debug(DebugMessageLevel::Information, "Texture object destroyed\n");
-}
-
-GSvalue xGSTextureImpl::GetValue(GSenum valuetype)
-{
-    switch (valuetype) {
-        case GS_TEX_TYPE:        return p_texturetype;
-        case GS_TEX_FORMAT:      return p_format;
-        case GS_TEX_WIDTH:       return p_width;
-        case GS_TEX_HEIGHT:      return p_height;
-        case GS_TEX_DEPTH:       return p_depth;
-        case GS_TEX_LAYERS:      return p_layers;
-        case GS_TEX_MIN_LEVEL:   return p_minlevel;
-        case GS_TEX_MAX_LEVEL:   return p_maxlevel;
-        case GS_TEX_MULTISAMPLE: return p_multisample;
-
-        default:
-            p_owner->error(GSE_INVALIDENUM);
-            return 0;
-    }
-}
-
-GSbool xGSTextureImpl::allocate(const GStexturedescription &desc)
-{
-    // TODO: check params
-    p_texturetype = desc.type;
-    p_format = desc.format;
-    p_width = desc.width;
-    p_height = desc.height;
-    p_depth = desc.depth;
-    p_layers = desc.layers;
-    p_multisample = desc.multisample;
-    if (p_texturetype == GS_TEXTYPE_RECT) {
-        p_minlevel = 0;
-        p_maxlevel = 0;
-    } else {
-        p_minlevel = desc.minlevel;
-        p_maxlevel = desc.maxlevel;
-    }
-
+    // TODO: move this to common code and texture formats
     xGSImpl::TextureFormatDescriptor texdesc;
     if (!p_owner->GetTextureFormatDescriptor(p_format, texdesc)) {
         p_owner->debug(DebugMessageLevel::Error, "Invalid texture format: %i\n", p_format);
@@ -115,13 +64,8 @@ GSbool xGSTextureImpl::allocate(const GStexturedescription &desc)
     return p_owner->error(GS_OK);
 }
 
-GSptr xGSTextureImpl::Lock(GSenum locktype, GSdword access, GSint level, GSint layer, void *lockdata)
+GSptr xGSTextureImpl::LockImpl(GSenum locktype, GSdword access, GSint level, GSint layer, void *lockdata)
 {
-    if (p_locktype) {
-        p_owner->error(GSE_INVALIDOPERATION);
-        return nullptr;
-    }
-
     GLenum buffer_target = 0;
     GLenum buffer_usage = 0;
 
@@ -139,10 +83,6 @@ GSptr xGSTextureImpl::Lock(GSenum locktype, GSdword access, GSint level, GSint l
                 buffer_target = GL_PIXEL_PACK_BUFFER;
                 buffer_usage = GL_STATIC_READ;
                 break;
-
-            default:
-                p_owner->error(GSE_INVALIDVALUE);
-                return nullptr;
         }
 
         glGenBuffers(1, &p_lockbuffer);
@@ -176,59 +116,7 @@ GSptr xGSTextureImpl::Lock(GSenum locktype, GSdword access, GSint level, GSint l
     return glMapBuffer(buffer_target, GL_WRITE_ONLY);
 }
 
-GSbool xGSTextureImpl::Unlock()
-{
-    if (!p_locktype) {
-        return p_owner->error(GSE_INVALIDOPERATION);
-    }
-
-    DoUnlock();
-
-    return p_owner->error(GS_OK);
-}
-
-void xGSTextureImpl::bindNullTexture()
-{
-    const GSuint target_count = 10;
-    const GLenum targets[target_count] = {
-        GL_TEXTURE_1D,
-        GL_TEXTURE_2D,
-        GL_TEXTURE_3D,
-        GL_TEXTURE_CUBE_MAP,
-
-        GL_TEXTURE_RECTANGLE,
-
-        GL_TEXTURE_1D_ARRAY,
-        GL_TEXTURE_2D_ARRAY,
-        GL_TEXTURE_CUBE_MAP_ARRAY,
-
-        GL_TEXTURE_2D_MULTISAMPLE,
-
-        GL_TEXTURE_2D_MULTISAMPLE_ARRAY
-    };
-
-    for (GSuint t = 0; t < target_count; ++t) {
-        glBindTexture(targets[t], 0);
-    }
-}
-
-void xGSTextureImpl::ReleaseRendererResources()
-{
-    if (p_locktype) {
-        DoUnlock();
-    }
-
-    if (p_texture) {
-        glDeleteTextures(1, &p_texture);
-        p_texture = 0;
-    }
-
-    if (p_buffer) {
-        glDeleteBuffers(1, &p_buffer);
-    }
-}
-
-void xGSTextureImpl::DoUnlock()
+void xGSTextureImpl::UnlockImpl()
 {
     if (p_texturetype == GS_TEXTYPE_BUFFER) {
         glBindBuffer(GL_TEXTURE_BUFFER, p_buffer);
@@ -270,6 +158,47 @@ void xGSTextureImpl::DoUnlock()
     p_lockaccess = 0;
     p_locklayer = 0;
     p_locktype = GS_NONE;
+}
+
+void xGSTextureImpl::bindNullTexture()
+{
+    const GSuint target_count = 10;
+    const GLenum targets[target_count] = {
+        GL_TEXTURE_1D,
+        GL_TEXTURE_2D,
+        GL_TEXTURE_3D,
+        GL_TEXTURE_CUBE_MAP,
+
+        GL_TEXTURE_RECTANGLE,
+
+        GL_TEXTURE_1D_ARRAY,
+        GL_TEXTURE_2D_ARRAY,
+        GL_TEXTURE_CUBE_MAP_ARRAY,
+
+        GL_TEXTURE_2D_MULTISAMPLE,
+
+        GL_TEXTURE_2D_MULTISAMPLE_ARRAY
+    };
+
+    for (GSuint t = 0; t < target_count; ++t) {
+        glBindTexture(targets[t], 0);
+    }
+}
+
+void xGSTextureImpl::ReleaseRendererResources()
+{
+    if (p_locktype) {
+        UnlockImpl();
+    }
+
+    if (p_texture) {
+        glDeleteTextures(1, &p_texture);
+        p_texture = 0;
+    }
+
+    if (p_buffer) {
+        glDeleteBuffers(1, &p_buffer);
+    }
 }
 
 void xGSTextureImpl::SetImage(GLenum gltarget, bool mipcascade)

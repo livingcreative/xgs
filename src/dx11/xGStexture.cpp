@@ -20,68 +20,17 @@ using namespace c_util;
 
 
 xGSTextureImpl::xGSTextureImpl(xGSImpl *owner) :
-    xGSObjectImpl(owner),
-    p_texturetype(GS_TEXTYPE_EMPTY),
+    xGSObjectBase(owner),
     p_texture(nullptr),
-    p_view(nullptr),
-    p_width(0),
-    p_height(0),
-    p_depth(0),
-    p_layers(0),
-    p_multisample(GS_MULTISAMPLE_NONE),
-    p_minlevel(0),
-    p_maxlevel(1000),
-    p_locktype(GS_NONE)
-{
-#ifdef _DEBUG
-    p_boundasrt = 0;
-#endif
-    p_owner->debug(DebugMessageLevel::Information, "Texture object created\n");
-}
+    p_view(nullptr)
+{}
 
 xGSTextureImpl::~xGSTextureImpl()
+{}
+
+GSbool xGSTextureImpl::AllocateImpl()
 {
-    ReleaseRendererResources();
-    p_owner->debug(DebugMessageLevel::Information, "Texture object destroyed\n");
-}
-
-GSvalue xGSTextureImpl::GetValue(GSenum valuetype)
-{
-    switch (valuetype) {
-        case GS_TEX_TYPE:        return p_texturetype;
-        case GS_TEX_FORMAT:      return p_format;
-        case GS_TEX_WIDTH:       return p_width;
-        case GS_TEX_HEIGHT:      return p_height;
-        case GS_TEX_DEPTH:       return p_depth;
-        case GS_TEX_LAYERS:      return p_layers;
-        case GS_TEX_MIN_LEVEL:   return p_minlevel;
-        case GS_TEX_MAX_LEVEL:   return p_maxlevel;
-        case GS_TEX_MULTISAMPLE: return p_multisample;
-
-        default:
-            p_owner->error(GSE_INVALIDENUM);
-            return 0;
-    }
-}
-
-GSbool xGSTextureImpl::allocate(const GStexturedescription &desc)
-{
-    // TODO: check params
-    p_texturetype = desc.type;
-    p_format = desc.format;
-    p_width = desc.width;
-    p_height = desc.height;
-    p_depth = desc.depth;
-    p_layers = desc.layers;
-    p_multisample = desc.multisample;
-    if (p_texturetype == GS_TEXTYPE_RECT) {
-        p_minlevel = 0;
-        p_maxlevel = 0;
-    } else {
-        p_minlevel = desc.minlevel;
-        p_maxlevel = desc.maxlevel;
-    }
-
+    // TODO: move this to common code and texture formats
     xGSImpl::TextureFormatDescriptor texdesc;
     if (!p_owner->GetTextureFormatDescriptor(p_format, texdesc)) {
         p_owner->debug(DebugMessageLevel::Error, "Invalid texture format: %i\n", p_format);
@@ -181,13 +130,8 @@ GSbool xGSTextureImpl::allocate(const GStexturedescription &desc)
     return p_owner->error(GS_OK);
 }
 
-GSptr xGSTextureImpl::Lock(GSenum locktype, GSdword access, GSint level, GSint layer, void *lockdata)
+GSptr xGSTextureImpl::LockImpl(GSenum locktype, GSdword access, GSint level, GSint layer, void *lockdata)
 {
-    if (p_locktype) {
-        p_owner->error(GSE_INVALIDOPERATION);
-        return nullptr;
-    }
-
     // TODO: xGSTextureImpl::Lock
     p_lockmemory = new char[p_width * p_height * p_bpp];
 
@@ -196,20 +140,19 @@ GSptr xGSTextureImpl::Lock(GSenum locktype, GSdword access, GSint level, GSint l
     p_locklayer = layer;
     p_locklevel = level;
 
-    p_owner->error(GS_OK);
-
     return p_lockmemory;
 }
 
-GSbool xGSTextureImpl::Unlock()
+void xGSTextureImpl::UnlockImpl()
 {
-    if (!p_locktype) {
-        return p_owner->error(GSE_INVALIDOPERATION);
-    }
+    // TODO: xGSTextureImpl::DoUnlock
+    p_owner->context()->UpdateSubresource(p_texture, 0, nullptr, p_lockmemory, p_width * p_bpp, 0);
 
-    DoUnlock();
+    delete[] p_lockmemory;
 
-    return p_owner->error(GS_OK);
+    p_lockaccess = 0;
+    p_locklayer = 0;
+    p_locktype = GS_NONE;
 }
 
 void xGSTextureImpl::bindNullTexture()
@@ -220,24 +163,12 @@ void xGSTextureImpl::bindNullTexture()
 void xGSTextureImpl::ReleaseRendererResources()
 {
     if (p_locktype) {
-        DoUnlock();
+        UnlockImpl();
     }
 
     // TODO: xGSTextureImpl::ReleaseRendererResources
     ::Release(p_view);
     ::Release(p_texture);
-}
-
-void xGSTextureImpl::DoUnlock()
-{
-    // TODO: xGSTextureImpl::DoUnlock
-    p_owner->context()->UpdateSubresource(p_texture, 0, nullptr, p_lockmemory, p_width * p_bpp, 0);
-
-    delete[] p_lockmemory;
-
-    p_lockaccess = 0;
-    p_locklayer = 0;
-    p_locktype = GS_NONE;
 }
 
 void xGSTextureImpl::SetImage(bool mipcascade)

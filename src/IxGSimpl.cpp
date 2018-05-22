@@ -570,6 +570,93 @@ GSbool IxGSInputImpl::allocate(const GSinputdescription &desc)
 
 
 
+IxGSTextureImpl::IxGSTextureImpl(xGSImpl *owner) :
+    xGSObjectImpl(owner)
+{
+    p_owner->debug(DebugMessageLevel::Information, "Texture object created\n");
+}
+
+IxGSTextureImpl::~IxGSTextureImpl()
+{
+    ReleaseRendererResources();
+    p_owner->debug(DebugMessageLevel::Information, "Texture object destroyed\n");
+}
+
+GSvalue IxGSTextureImpl::GetValue(GSenum valuetype)
+{
+    switch (valuetype) {
+        case GS_TEX_TYPE:        return p_texturetype;
+        case GS_TEX_FORMAT:      return p_format;
+        case GS_TEX_WIDTH:       return p_width;
+        case GS_TEX_HEIGHT:      return p_height;
+        case GS_TEX_DEPTH:       return p_depth;
+        case GS_TEX_LAYERS:      return p_layers;
+        case GS_TEX_MIN_LEVEL:   return p_minlevel;
+        case GS_TEX_MAX_LEVEL:   return p_maxlevel;
+        case GS_TEX_MULTISAMPLE: return p_multisample;
+
+        default:
+            p_owner->error(GSE_INVALIDENUM);
+            return 0;
+    }
+}
+
+GSptr IxGSTextureImpl::Lock(GSenum locktype, GSdword access, GSint level, GSint layer, void *lockdata)
+{
+    if (p_locktype) {
+        p_owner->error(GSE_INVALIDOPERATION);
+        return nullptr;
+    }
+
+    if (access != GS_READ && access != GS_WRITE) {
+        p_owner->error(GSE_INVALIDVALUE);
+        return nullptr;
+    }
+
+    // TODO: check parameters
+
+    p_owner->error(GS_OK);
+    return LockImpl(locktype, access, level, layer, lockdata);
+}
+
+GSbool IxGSTextureImpl::Unlock()
+{
+    if (p_locktype == GS_NONE) {
+        return p_owner->error(GSE_INVALIDOPERATION);
+    }
+
+    UnlockImpl();
+
+    return p_owner->error(GS_OK);
+}
+
+GSbool IxGSTextureImpl::allocate(const GStexturedescription &desc)
+{
+    // TODO: check params
+    p_texturetype = desc.type;
+    p_format = desc.format;
+    p_width = desc.width;
+    p_height = desc.height;
+    p_depth = desc.depth;
+    p_layers = desc.layers;
+    p_multisample = desc.multisample;
+    if (p_texturetype == GS_TEXTYPE_RECT) {
+        p_minlevel = 0;
+        p_maxlevel = 0;
+    } else {
+        p_minlevel = desc.minlevel;
+        p_maxlevel = desc.maxlevel;
+    }
+
+    if (!AllocateImpl()) {
+        return p_owner->error(GSE_OUTOFRESOURCES);
+    }
+
+    return p_owner->error(GS_OK);
+}
+
+
+
 IxGSImpl::~IxGSImpl()
 {
     // TODO: make internal implementation of these End/Destroy funcs
@@ -648,7 +735,7 @@ GSbool IxGSImpl::CreateObject(GSenum type, const void *desc, void **result)
         GS_CREATE_OBJECT(GS_OBJECTTYPE_GEOMETRY, IxGSGeometryImpl, GSgeometrydescription)
         GS_CREATE_OBJECT(GS_OBJECTTYPE_GEOMETRYBUFFER, IxGSGeometryBufferImpl, GSgeometrybufferdescription)
         GS_CREATE_OBJECT(GS_OBJECTTYPE_DATABUFFER, IxGSDataBufferImpl, GSdatabufferdescription)
-        GS_CREATE_OBJECT(GS_OBJECTTYPE_TEXTURE, xGSTextureImpl, GStexturedescription)
+        GS_CREATE_OBJECT(GS_OBJECTTYPE_TEXTURE, IxGSTextureImpl, GStexturedescription)
         GS_CREATE_OBJECT(GS_OBJECTTYPE_FRAMEBUFFER, IxGSFrameBufferImpl, GSframebufferdescription)
         GS_CREATE_OBJECT(GS_OBJECTTYPE_STATE, xGSStateImpl, GSstatedescription)
         GS_CREATE_OBJECT(GS_OBJECTTYPE_INPUT, IxGSInputImpl, GSinputdescription)

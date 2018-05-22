@@ -91,6 +91,23 @@ namespace xGS
         GSbool allocate(const GSinputdescription &desc);
     };
 
+    // texture object
+    class IxGSTextureImpl : public xGSObjectImpl<xGSTextureImpl, IxGSTextureImpl>
+    {
+    public:
+        IxGSTextureImpl(xGSImpl *owner);
+        ~IxGSTextureImpl() override;
+
+    public:
+        GSvalue xGSAPI GetValue(GSenum valuetype) override;
+
+        GSptr   xGSAPI Lock(GSenum locktype, GSdword access, GSint level, GSint layer, void *lockdata) override;
+        GSbool  xGSAPI Unlock() override;
+
+    public:
+        GSbool allocate(const GStexturedescription &desc);
+    };
+
     // system object
     class IxGSImpl : public xGSImpl
     {

@@ -155,7 +155,6 @@ IxGSGeometryImpl::~IxGSGeometryImpl()
     p_owner->debug(DebugMessageLevel::Information, "Geometry object destroyed\n");
 }
 
-
 GSvalue IxGSGeometryImpl::GetValue(GSenum valuetype)
 {
     switch (valuetype) {
@@ -572,6 +571,24 @@ xGSInputBase::xGSInputBase() :
 
 
 
+xGSTextureBase::xGSTextureBase() :
+    p_texturetype(GS_TEXTYPE_EMPTY),
+    p_format(0),
+    p_width(0),
+    p_height(0),
+    p_depth(0),
+    p_layers(0),
+    p_multisample(GS_MULTISAMPLE_NONE),
+    p_minlevel(0),
+    p_maxlevel(1000),
+    p_locktype(GS_NONE)
+{
+#ifdef _DEBUG
+    p_boundasrt = 0;
+#endif
+}
+
+
 // xGS system object instance
 IxGS xGSImplBase::gs = nullptr;
 
@@ -694,7 +711,7 @@ template <> void xGSImplBase::RemoveObject(type *object)\
 GS_ADD_REMOVE_OBJECT_IMPL(p_geometrylist, IxGSGeometryImpl)
 GS_ADD_REMOVE_OBJECT_IMPL(p_geometrybufferlist, IxGSGeometryBufferImpl)
 GS_ADD_REMOVE_OBJECT_IMPL(p_databufferlist, IxGSDataBufferImpl)
-GS_ADD_REMOVE_OBJECT_IMPL(p_texturelist, xGSTextureImpl)
+GS_ADD_REMOVE_OBJECT_IMPL(p_texturelist, IxGSTextureImpl)
 GS_ADD_REMOVE_OBJECT_IMPL(p_framebufferlist, IxGSFrameBufferImpl)
 GS_ADD_REMOVE_OBJECT_IMPL(p_statelist, xGSStateImpl)
 GS_ADD_REMOVE_OBJECT_IMPL(p_inputlist, IxGSInputImpl)
