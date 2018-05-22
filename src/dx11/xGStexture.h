@@ -15,7 +15,6 @@
 #pragma once
 
 #include "xGS/xGS.h"
-#include "xGSobject.h"
 
 
 struct ID3D11Resource;
@@ -26,7 +25,7 @@ namespace xGS
 {
 
     // texture object
-    class xGSTextureImpl : public xGSObjectImpl<xGSObjectBase<xGSTexture>, xGSTextureImpl>
+    class xGSTextureImpl : public xGSObjectImpl<xGSObjectBase<xGSTexture, xGSImpl>, xGSTextureImpl>
     {
     public:
         xGSTextureImpl(xGSImpl *owner);

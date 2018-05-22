@@ -67,7 +67,7 @@ namespace xGS
         void SetBlendColorImpl(const GScolor &color);
         void SetUniformValueImpl(GSenum type, GSint location, const void *value);
 
-        void SetupGeometryImpl(xGSGeometryImpl *geometry);
+        void SetupGeometryImpl(IxGSGeometryImpl *geometry);
 
         void BeginCaptureImpl(GSenum mode);
         void EndCaptureImpl(GSuint *elementcount);
@@ -86,7 +86,7 @@ namespace xGS
 
         void BufferCommitmentImpl(xGSObject *buffer, GSuint offset, GSuint size, GSbool commit, GSuint flags);
         void GeometryBufferCommitmentImpl(xGSGeometryBufferImpl *buffer);
-        void GeometryBufferCommitmentGeometry(xGSGeometryImpl *geometry, GSuint vertexsize, GSuint indexsize, GSbool commit);
+        void GeometryBufferCommitmentGeometry(IxGSGeometryImpl *geometry, GSuint vertexsize, GSuint indexsize, GSbool commit);
         void TextureCommitmentImpl(xGSTextureImpl *texture, GSuint level, GSuint x, GSuint y, GSuint z, GSuint width, GSuint height, GSuint depth, GSbool commit);
 
         void BeginTimerQueryImpl();

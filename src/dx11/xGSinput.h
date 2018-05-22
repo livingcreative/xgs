@@ -14,15 +14,14 @@
 
 #pragma once
 
-#include "xGSobject.h"
-#include "xGSinputbase.h"
+#include "xGSimplbase.h"
 
 
 namespace xGS
 {
 
     // input object
-    class xGSInputImpl : public xGSObjectBase<xGSInputBase>
+    class xGSInputImpl : public xGSObjectBase<xGSInputBase, xGSImpl>
     {
     public:
         xGSInputImpl(xGSImpl *owner);

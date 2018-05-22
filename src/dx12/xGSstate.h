@@ -16,7 +16,6 @@
 #pragma once
 
 #include "xGS/xGS.h"
-#include "xGSobject.h"
 #include "xGSparameters.h"
 #include "xGSutil.h"
 #include <string>
@@ -28,7 +27,7 @@ namespace xGS
 {
 
     // program object
-    class xGSStateImpl : public xGSObjectImpl<xGSObjectBase<xGSState>, xGSStateImpl>
+    class xGSStateImpl : public xGSObjectImpl<xGSObjectBase<xGSState, xGSImpl>, xGSStateImpl>
     {
     public:
         xGSStateImpl(xGSImpl *owner);

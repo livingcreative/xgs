@@ -15,15 +15,14 @@
 
 #pragma once
 
-#include "xGSobject.h"
-#include "xGSframebufferbase.h"
+#include "xGSimplbase.h"
 
 
 namespace xGS
 {
 
     // framebuffer object
-    class xGSFrameBufferImpl : public xGSObjectBase<xGSFrameBufferBase>
+    class xGSFrameBufferImpl : public xGSObjectBase<xGSFrameBufferBase, xGSImpl>
     {
     public:
         xGSFrameBufferImpl(xGSImpl *owner);

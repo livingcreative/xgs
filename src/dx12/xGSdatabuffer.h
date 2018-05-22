@@ -15,8 +15,7 @@
 
 #pragma once
 
-#include "xGSobject.h"
-#include "xGSdatabufferbase.h"
+#include "xGSimplbase.h"
 
 
 struct ID3D12Resource;
@@ -26,7 +25,7 @@ namespace xGS
 {
 
     // data buffer object
-    class xGSDataBufferImpl : public xGSObjectBase<xGSDataBufferBase>
+    class xGSDataBufferImpl : public xGSObjectBase<xGSDataBufferBase, xGSImpl>
     {
     public:
         xGSDataBufferImpl(xGSImpl *owner);

@@ -12,7 +12,6 @@
 */
 
 #include "xGSimpl.h"
-#include "xGSgeometry.h"
 #include "xGSgeometrybuffer.h"
 #include "xGSdatabuffer.h"
 #include "xGStexture.h"
@@ -262,7 +261,7 @@ void xGSImpl::SetUniformValueImpl(GSenum type, GSint location, const void *value
     // TODO: xGSImpl::SetUniformValueImpl
 }
 
-void xGSImpl::SetupGeometryImpl(xGSGeometryImpl *geometry)
+void xGSImpl::SetupGeometryImpl(IxGSGeometryImpl *geometry)
 {
     // TODO: xGSImpl::SetupGeometryImpl
 }
@@ -392,7 +391,7 @@ void xGSImpl::GeometryBufferCommitmentImpl(xGSGeometryBufferImpl *buffer)
     // TODO: xGSImpl::GeometryBufferCommitmentImpl
 }
 
-void xGSImpl::GeometryBufferCommitmentGeometry(xGSGeometryImpl *geometry, GSuint vertexsize, GSuint indexsize, GSbool commit)
+void xGSImpl::GeometryBufferCommitmentGeometry(IxGSGeometryImpl *geometry, GSuint vertexsize, GSuint indexsize, GSbool commit)
 {
     // TODO: xGSImpl::GeometryBufferCommitmentGeometry
 }
