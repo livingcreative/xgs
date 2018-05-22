@@ -14,18 +14,560 @@
 #pragma once
 
 #include "IxGSimpl.h"
-#include "xGSgeometry.h"
-#include "IxGSdatabufferimpl.h"
-#include "IxGSgeometrybufferimpl.h"
-#include "IxGSframebufferimpl.h"
 #include "xGStexture.h"
-#include "xGSframebuffer.h"
 #include "xGSstate.h"
-#include "IxGSinputimpl.h"
 #include "xGSparameters.h"
 
 
 using namespace xGS;
+
+
+IxGSDataBufferImpl::IxGSDataBufferImpl(xGSImpl *owner) :
+    xGSObjectImpl(owner)
+{
+    p_owner->debug(DebugMessageLevel::Information, "DataBuffer object created\n");
+}
+
+IxGSDataBufferImpl::~IxGSDataBufferImpl()
+{
+    ReleaseRendererResources();
+    p_owner->debug(DebugMessageLevel::Information, "DataBuffer object destroyed\n");
+}
+
+GSbool IxGSDataBufferImpl::allocate(const GSdatabufferdescription &desc)
+{
+    switch (desc.type) {
+        case GSDT_UNIFORM: break;
+        default:
+            return p_owner->error(GSE_INVALIDENUM);
+    }
+
+    p_size = 0;
+
+    if (!desc.blocks) {
+        return p_owner->error(GSE_INVALIDVALUE);
+    }
+
+    // TODO: refactor caps for all implementations
+    GSuint alignment = p_owner->caps().ubo_alignment - 1;
+
+    const GSuniformblock *block = desc.blocks;
+    while (block->type != GSB_END) {
+        UniformBlock uniformblock = {
+            p_size,                    // offset
+            0,                         // size
+            0,                         // actual size
+            block->count,              // count
+            GSuint(p_uniforms.size()), // firstuniform
+            GSuint(p_uniforms.size())  // onepastlastuniform
+        };
+
+        const GSuniform *uniform = block->uniforms;
+        GSuint uniformoffset = 0;
+        while (uniform->type != GSU_END) {
+            Uniform u = {
+                uniform->type, // type
+                uniformoffset, // offset
+                0,             // size
+                0,             // stride
+                0,             // totalsize
+                uniform->count // count
+            };
+
+            // TODO: check stride values
+            switch (uniform->type) {
+                case GSU_SCALAR: u.size = 4; u.stride = 16; break;
+                case GSU_VEC2:   u.size = 8; u.stride = 16; break;
+                case GSU_VEC3:   u.size = 16; u.stride = 16; break;
+                case GSU_VEC4:   u.size = 16; u.stride = 16; break;
+                case GSU_MAT2:   u.size = 32; u.stride = 32; break;
+                case GSU_MAT3:   u.size = 48; u.stride = 48; break;
+                case GSU_MAT4:   u.size = 64; u.stride = 64; break;
+                default:
+                    return p_owner->error(GSE_INVALIDENUM);
+            }
+
+            // TODO: adjust array paddings
+            u.totalsize = u.stride * uniform->count;
+            uniformoffset += u.totalsize;
+
+            uniformblock.size += u.totalsize;
+            ++uniformblock.onepastlastuniform;
+
+            p_uniforms.push_back(u);
+
+            ++uniform;
+        }
+
+        uniformblock.actualsize = uniformblock.size;
+        uniformblock.size = (uniformblock.size + alignment) & ~alignment;
+        GSuint blocksize = uniformblock.size * block->count;
+
+        p_blocks.push_back(uniformblock);
+
+        p_size += blocksize;
+
+        ++block;
+    }
+
+    if (p_size == 0) {
+        return GS_FALSE;
+    }
+
+    if (!AllocateImpl(desc, p_size)) {
+        return p_owner->error(GSE_OUTOFRESOURCES);
+    }
+
+    return p_owner->error(GS_OK);
+}
+
+GSvalue IxGSDataBufferImpl::GetValue(GSenum valuetype)
+{
+    p_owner->error(GSE_UNIMPLEMENTED);
+    return 0;
+}
+
+GSbool IxGSDataBufferImpl::Update(GSuint offset, GSuint size, const GSptr data)
+{
+    if (p_size == 0) {
+        return p_owner->error(GSE_INVALIDOPERATION);
+    }
+
+    UpdateImpl(offset, size, data);
+
+    return p_owner->error(GS_OK);
+}
+
+GSbool IxGSDataBufferImpl::UpdateBlock(GSuint block, GSuint index, const GSptr data)
+{
+    if (p_size == 0) {
+        return p_owner->error(GSE_INVALIDOPERATION);
+    }
+
+    if (block >= p_blocks.size()) {
+        return p_owner->error(GSE_INVALIDVALUE);
+    }
+
+    const UniformBlock &ub = p_blocks[block];
+
+    if (index >= ub.count) {
+        return p_owner->error(GSE_INVALIDVALUE);
+    }
+
+    UpdateImpl(ub.offset + ub.size * index, ub.actualsize, data);
+
+    return p_owner->error(GS_OK);
+}
+
+GSbool IxGSDataBufferImpl::UpdateValue(GSuint block, GSuint index, GSuint uniform, GSuint uniformindex, GSuint count, const GSptr data)
+{
+    if (p_size == 0) {
+        return p_owner->error(GSE_INVALIDOPERATION);
+    }
+
+    if (block >= p_blocks.size()) {
+        return p_owner->error(GSE_INVALIDVALUE);
+    }
+
+    const UniformBlock &ub = p_blocks[block];
+
+    if (index >= ub.count) {
+        return p_owner->error(GSE_INVALIDVALUE);
+    }
+
+    if ((uniform + ub.firstuniform) >= ub.onepastlastuniform) {
+        return p_owner->error(GSE_INVALIDVALUE);
+    }
+
+    const Uniform &u = p_uniforms[ub.firstuniform + uniform];
+
+    if (uniformindex >= u.count) {
+        return p_owner->error(GSE_INVALIDVALUE);
+    }
+
+    GSuint offset = ub.offset + ub.size * index + u.offset + u.stride * uniformindex;
+
+    UpdateImpl(offset, u.stride * count, data);
+
+    return p_owner->error(GS_OK);
+}
+
+GSptr IxGSDataBufferImpl::Lock(GSdword access, void *lockdata)
+{
+    if (p_locktype) {
+        p_owner->error(GSE_INVALIDOPERATION);
+        return nullptr;
+    }
+
+    p_owner->error(GS_OK);
+    return LockImpl(access);
+}
+
+GSbool IxGSDataBufferImpl::Unlock()
+{
+    if (p_locktype == GS_NONE) {
+        return p_owner->error(GSE_INVALIDOPERATION);
+    }
+
+    UnlockImpl();
+
+    return p_owner->error(GS_OK);
+}
+
+
+
+IxGSFrameBufferImpl::IxGSFrameBufferImpl(xGSImpl *owner) :
+    xGSObjectImpl(owner)
+{
+    p_owner->debug(DebugMessageLevel::Information, "FrameBuffer object created\n");
+}
+
+IxGSFrameBufferImpl::~IxGSFrameBufferImpl()
+{
+    ReleaseRendererResources();
+    p_owner->debug(DebugMessageLevel::Information, "FrameBuffer object destroyed\n");
+}
+
+GSbool IxGSFrameBufferImpl::allocate(const GSframebufferdescription &desc)
+{
+    // set description
+    p_width = desc.width;
+    p_height = desc.height;
+    p_colortargets = umin(desc.colortargets, GSuint(GS_MAX_FB_COLORTARGETS));
+    for (size_t n = 0; n < GS_MAX_FB_COLORTARGETS; ++n) {
+        p_colorformat[n] = desc.colorformat[n];
+    }
+    p_depthstencilformat = desc.depthstencilformat;
+    p_multisample = desc.multisample;
+
+    if (p_width == 0 || p_height == 0) {
+        return p_owner->error(GSE_INVALIDVALUE);
+    }
+
+    // initialize attachments
+    if (desc.attachments) {
+        const GSframebufferattachment *attachment = desc.attachments;
+        while (attachment->attachment != GSA_END) {
+            // TODO: replace getID() with common resource allocation check function
+            if (attachment->texture && static_cast<xGSTextureImpl*>(attachment->texture)->getID() == 0) {
+                return p_owner->error(GSE_INVALIDOBJECT);
+            }
+
+            switch (attachment->attachment) {
+                case GSA_COLOR0:
+                case GSA_COLOR1:
+                case GSA_COLOR2:
+                case GSA_COLOR3:
+                case GSA_COLOR4:
+                case GSA_COLOR5:
+                case GSA_COLOR6:
+                case GSA_COLOR7:
+                {
+                    GSuint n = attachment->attachment - GSA_COLOR0;
+                    GSenum fmt = p_colorformat[n];
+                    if (fmt != GS_COLOR_DEFAULT) {
+                        return p_owner->error(GSE_INVALIDVALUE);
+                    }
+
+                    p_colortextures[n].attach(
+                        static_cast<xGSTextureImpl*>(attachment->texture),
+                        attachment->level, attachment->slice
+                    );
+                }
+                break;
+
+                case GSA_DEPTH:
+                    if (p_depthstencilformat != GS_DEPTH_DEFAULT) {
+                        return p_owner->error(GSE_INVALIDVALUE);
+                    }
+
+                    p_depthtexture.attach(
+                        static_cast<xGSTextureImpl*>(attachment->texture),
+                        attachment->level, attachment->slice
+                    );
+
+                    break;
+
+                case GSA_STENCIL:
+
+                default:
+                    return p_owner->error(GSE_INVALIDENUM);
+            }
+
+            ++attachment;
+        }
+    }
+
+    // check for multisample textures
+    // texture samples value should match frame buffer's samples value, or should be 0
+    bool incomplete = false;
+    int attachmentcount = 0;
+    int multisampled_attachments = 0;
+    int srgb_attachments = 0;
+
+    for (GSuint n = 0; n < p_colortargets; ++n) {
+        checkAttachment(
+            p_colorformat[n], p_colortextures[n], incomplete,
+            attachmentcount, multisampled_attachments, srgb_attachments
+        );
+    }
+    checkAttachment(
+        p_depthstencilformat, p_depthtexture, incomplete,
+        attachmentcount, multisampled_attachments, srgb_attachments
+    );
+
+    if (incomplete) {
+        return p_owner->error(GSE_INVALIDVALUE);
+    }
+
+    if (srgb_attachments != 0 && srgb_attachments != p_colortargets) {
+        return p_owner->error(GSE_INVALIDVALUE);
+    }
+
+    if (multisampled_attachments != 0 && multisampled_attachments != attachmentcount) {
+        return p_owner->error(GSE_INVALIDVALUE);
+    }
+
+    p_srgb = srgb_attachments > 0;
+
+    AllocateImpl(multisampled_attachments);
+
+    return p_owner->error(GS_OK);
+}
+
+GSvalue IxGSFrameBufferImpl::GetValue(GSenum valuetype)
+{
+    switch (valuetype) {
+        case GS_FB_TYPE:          return GS_FBTYPE_OFFSCREEN;
+        case GS_FB_WIDTH:         return p_width;
+        case GS_FB_HEIGHT:        return p_height;
+        case GS_FB_DOUBLEBUFFER:  return GS_FALSE;
+        case GS_FB_COLORTARGETS:  return p_colortargets;
+        case GS_FB_DEPTHFORMAT:   return p_depthstencilformat;
+        case GS_FB_STENCILFORMAT: return GS_STENCIL_NONE;
+        case GS_FB_MULTISAMPLE:   return p_multisample;
+
+        case GS_FB_COLORFORMAT0:
+        case GS_FB_COLORFORMAT1:
+        case GS_FB_COLORFORMAT2:
+        case GS_FB_COLORFORMAT3:
+        case GS_FB_COLORFORMAT4:
+        case GS_FB_COLORFORMAT5:
+        case GS_FB_COLORFORMAT6:
+        case GS_FB_COLORFORMAT7:
+            return p_colorformat[valuetype - GS_FB_COLORFORMAT0];
+    }
+
+    p_owner->error(GSE_INVALIDENUM);
+    return 0;
+}
+
+void IxGSFrameBufferImpl::checkAttachment(GSenum format, const Attachment &att, bool &incomplete, int &attachments, int &multiampled_attachments, int &srgb_attachments)
+{
+    switch (format) {
+        case GS_DEFAULT:
+            ++attachments;
+
+            if (att.p_texture == nullptr) {
+                incomplete = true;
+                return;
+            }
+
+            if (att.p_texture->samples() != 0 && p_multisample == 0) {
+                incomplete = true;
+                return;
+            }
+
+            if (att.p_texture->samples() != 0 && att.p_texture->samples() != p_multisample) {
+                incomplete = true;
+                return;
+            }
+
+            if (att.p_texture->samples()) {
+                ++multiampled_attachments;
+            }
+
+            if (att.p_texture->format() == GS_COLOR_S_RGBA || att.p_texture->format() == GS_COLOR_S_RGBX) {
+                ++srgb_attachments;
+            }
+
+            break;
+
+        case GS_COLOR_S_RGBA:
+        case GS_COLOR_S_RGBX:
+            ++srgb_attachments;
+            break;
+    }
+}
+
+
+
+IxGSGeometryBufferImpl::IxGSGeometryBufferImpl(xGSImpl *owner) :
+    xGSObjectImpl(owner)
+{
+    p_owner->debug(DebugMessageLevel::Information, "GeometryBuffer object created\n");
+}
+
+IxGSGeometryBufferImpl::~IxGSGeometryBufferImpl()
+{
+    ReleaseRendererResources();
+    p_owner->debug(DebugMessageLevel::Information, "GeometryBuffer object destroyed\n");
+}
+
+GSvalue IxGSGeometryBufferImpl::GetValue(GSenum valuetype)
+{
+    switch (valuetype) {
+        case GS_GB_TYPE:              return p_type;
+        case GS_GB_VERTEXCOUNT:       return p_vertexcount;
+        case GS_GB_VERTEXSIZE:        return 0; // TODO
+        case GS_GB_INDEXCOUNT:        return p_indexcount;
+        case GS_GB_INDEXFORMAT:       return p_indexformat;
+        case GS_GB_VERTEXBYTES:       return 0; // TODO
+        case GS_GB_INDEXBYTES:        return 0; // TODO
+        case GS_GB_ACCESS:            return 0; // TODO
+        case GS_GB_VERTICESALLOCATED: return p_currentvertex;
+        case GS_GB_INDICESALLOCATED:  return p_currentindex;
+    }
+
+    p_owner->error(GSE_INVALIDENUM);
+    return 0;
+}
+
+GSptr IxGSGeometryBufferImpl::Lock(GSenum locktype, GSdword access, void *lockdata)
+{
+    if (p_locktype || p_type == GS_GBTYPE_IMMEDIATE) {
+        p_owner->error(GSE_INVALIDOPERATION);
+        return nullptr;
+    }
+
+    if (locktype != GS_LOCK_VERTEXDATA && locktype != GS_LOCK_INDEXDATA) {
+        p_owner->error(GSE_INVALIDENUM);
+        return nullptr;
+    }
+
+    if (locktype == GS_LOCK_INDEXDATA && p_indexformat == GS_INDEX_NONE) {
+        p_owner->error(GSE_INVALIDVALUE);
+        return nullptr;
+    }
+
+    p_owner->error(GS_OK);
+    return LockImpl(
+        locktype, 0,
+        locktype == GS_LOCK_VERTEXDATA ?
+        p_vertexdecl.buffer_size(p_vertexcount) :
+        index_buffer_size(p_indexformat, p_indexcount)
+    );
+}
+
+GSbool IxGSGeometryBufferImpl::Unlock()
+{
+    if (p_locktype == GS_NONE || p_locktype == LOCK_IMMEDIATE) {
+        return p_owner->error(GSE_INVALIDOPERATION);
+    }
+
+    UnlockImpl();
+
+    return p_owner->error(GS_OK);
+}
+
+void IxGSGeometryBufferImpl::BeginImmediateDrawing()
+{
+    p_currentvertex = 0;
+    p_currentindex = 0;
+
+    p_primitives.clear();
+
+    p_locktype = LOCK_IMMEDIATE;
+
+    BeginImmediateDrawingImpl();
+}
+
+void IxGSGeometryBufferImpl::EndImmediateDrawing()
+{
+    EndImmediateDrawingImpl();
+
+    p_vertexptr = nullptr;
+    p_indexptr = nullptr;
+    p_locktype = GS_NONE;
+
+    // NOTE: primitives list isn't released here!!!
+    //         because after calling EndImmediateDrawing
+    //         implementation should issue rendering commands to
+    //         render cached primitives
+}
+
+
+
+IxGSInputImpl::IxGSInputImpl(xGSImpl *owner) :
+    xGSObjectImpl(owner)
+{
+    p_owner->debug(DebugMessageLevel::Information, "Input object created\n");
+}
+
+IxGSInputImpl::~IxGSInputImpl()
+{
+    ReleaseRendererResources();
+    p_owner->debug(DebugMessageLevel::Information, "Input object destroyed\n");
+}
+
+GSbool IxGSInputImpl::allocate(const GSinputdescription &desc)
+{
+    if (!desc.bindings) {
+        return p_owner->error(GSE_INVALIDVALUE);
+    }
+
+    xGSStateImpl *state = static_cast<xGSStateImpl*>(desc.state);
+    if (!state) {
+        return p_owner->error(GSE_INVALIDOBJECT);
+    }
+
+    GSuint elementbuffers = 0;
+    p_buffers.resize(state->inputCount());
+    for (auto &b : p_buffers) {
+        b = nullptr;
+    }
+
+    const GSinputbinding *binding = desc.bindings;
+    while (binding->slot != GSIS_END) {
+        if (GSuint(binding->slot - GSIS_0) >= state->inputCount()) {
+            // invalid slot index
+            return p_owner->error(GSE_INVALIDVALUE);
+        }
+
+        if (state->input(binding->slot - GSIS_0).buffer) {
+            // slot already bound to static buffer
+            return p_owner->error(GSE_INVALIDVALUE);
+        }
+
+        xGSGeometryBufferImpl *buffer = static_cast<xGSGeometryBufferImpl*>(binding->buffer);
+
+        // TODO: check layout match
+
+        if (buffer->indexFormat() != GS_INDEX_NONE) {
+            ++elementbuffers;
+        }
+
+        p_buffers[binding->slot - GSIS_0] = buffer;
+        ++binding;
+    }
+
+    if (p_buffers.size() != state->inputAvailable() || elementbuffers > 1) {
+        // TODO: reconsider error code
+        return p_owner->error(GSE_INVALIDOPERATION);
+    }
+
+    p_state = state;
+    p_state->AddRef();
+
+    p_primarybuffer = p_buffers[p_state->inputPrimarySlot()];
+
+    if (!AllocateImpl(elementbuffers)) {
+        return p_owner->error(GSE_OUTOFRESOURCES);
+    }
+
+    return p_owner->error(GS_OK);
+}
+
 
 
 IxGSImpl::~IxGSImpl()
@@ -40,7 +582,6 @@ IxGSImpl::~IxGSImpl()
         DestroyRenderer(true);
     }
 }
-
 
 GSbool IxGSImpl::CreateRenderer(const GSrendererdescription &desc)
 {
@@ -104,7 +645,7 @@ GSbool IxGSImpl::CreateObject(GSenum type, const void *desc, void **result)
 {
     // TODO: make refcounting and adding to object list only after successful creation
     switch (type) {
-        GS_CREATE_OBJECT(GS_OBJECTTYPE_GEOMETRY, xGSGeometryImpl, GSgeometrydescription)
+        GS_CREATE_OBJECT(GS_OBJECTTYPE_GEOMETRY, IxGSGeometryImpl, GSgeometrydescription)
         GS_CREATE_OBJECT(GS_OBJECTTYPE_GEOMETRYBUFFER, IxGSGeometryBufferImpl, GSgeometrybufferdescription)
         GS_CREATE_OBJECT(GS_OBJECTTYPE_DATABUFFER, IxGSDataBufferImpl, GSdatabufferdescription)
         GS_CREATE_OBJECT(GS_OBJECTTYPE_TEXTURE, xGSTextureImpl, GStexturedescription)
@@ -598,7 +1139,7 @@ GSbool IxGSImpl::GeometryBufferCommitment(IxGSGeometryBuffer buffer, IxGSGeometr
     GeometryBufferCommitmentImpl(impl);
 
     for (GSuint n = 0; n < count; ++n) {
-        xGSGeometryImpl *geom = static_cast<xGSGeometryImpl*>(*geometries++);
+        IxGSGeometryImpl *geom = static_cast<IxGSGeometryImpl*>(*geometries++);
 
         if (geom->buffer() != impl) {
             // skip
@@ -680,7 +1221,6 @@ GSbool IxGSImpl::GatherTimers(GSuint flags, GSuint64 *values, GSuint count)
 }
 
 
-
 IxGS IxGSImpl::create()
 {
     if (!gs) {
@@ -690,7 +1230,6 @@ IxGS IxGSImpl::create()
     gs->AddRef();
     return gs;
 }
-
 
 
 void IxGSImpl::SetStateImpl(xGSStateImpl *state)
@@ -722,7 +1261,7 @@ GSbool IxGSImpl::Draw(IxGSGeometry geometry_to_draw, const T &drawer)
         return error(GSE_INVALIDSTATE);
     }
 
-    xGSGeometryImpl *geometry = static_cast<xGSGeometryImpl*>(geometry_to_draw);
+    IxGSGeometryImpl *geometry = static_cast<IxGSGeometryImpl*>(geometry_to_draw);
     xGSGeometryBufferImpl *buffer = geometry->buffer();
 
 #ifdef _DEBUG
@@ -784,7 +1323,7 @@ GSbool IxGSImpl::MultiDraw(IxGSGeometry *geometries_to_draw, GSuint count, const
     size_t current = 0;
 
     for (GSuint n = 0; n < count; ++n) {
-        xGSGeometryImpl *geometry = static_cast<xGSGeometryImpl*>(geometries_to_draw[n]);
+        IxGSGeometryImpl *geometry = static_cast<IxGSGeometryImpl*>(geometries_to_draw[n]);
 
 #ifdef _DEBUG
         xGSGeometryBufferImpl *buffer = geometry->buffer();

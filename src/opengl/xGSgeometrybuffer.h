@@ -15,15 +15,14 @@
 
 #pragma once
 
-#include "xGSobject.h"
-#include "xGSgeometrybufferbase.h"
+#include "xGSimplbase.h"
 
 
 namespace xGS
 {
 
     // geometry buffer object
-    class xGSGeometryBufferImpl : public xGSObjectBase<xGSGeometryBufferBase>
+    class xGSGeometryBufferImpl : public xGSObjectBase<xGSGeometryBufferBase, xGSImpl>
     {
     public:
         xGSGeometryBufferImpl(xGSImpl *owner);

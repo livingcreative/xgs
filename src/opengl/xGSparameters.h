@@ -14,7 +14,6 @@
 
 #pragma once
 
-#include "xGSobject.h"
 #include "xGSutil.h"
 #include "xGSGLutil.h"
 #include <vector>
@@ -30,7 +29,7 @@ namespace xGS
 
     // parameters object
     class xGSParametersImpl :
-        public xGSObjectImpl<xGSObjectBase<xGSParameters>, xGSParametersImpl>,
+        public xGSObjectImpl<xGSObjectBase<xGSParameters, xGSImpl>, xGSParametersImpl>,
         public GSParametersState
     {
     public:

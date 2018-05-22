@@ -28,15 +28,6 @@
 
 // "unity" build - common
 #include "xGSutil.cpp"
-#include "xGSdatabufferbase.cpp"
-#include "IxGSdatabufferimpl.cpp"
-#include "xGSgeometrybufferbase.cpp"
-#include "IxGSgeometrybufferimpl.cpp"
-#include "xGSframebufferbase.cpp"
-#include "IxGSframebufferimpl.cpp"
-#include "xGSinputbase.cpp"
-#include "IxGSinputimpl.cpp"
-#include "xGSgeometry.cpp"
 #include "xGSimplbase.cpp"
 #include "IxGSimpl.cpp"
 

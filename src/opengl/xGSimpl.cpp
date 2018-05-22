@@ -13,7 +13,6 @@
 
 #include "xGSimpl.h"
 #include "xGScontextplatform.h"
-#include "xGSgeometry.h"
 #include "xGSgeometrybuffer.h"
 #include "xGSdatabuffer.h"
 #include "xGStexture.h"
@@ -255,6 +254,8 @@ void xGSImpl::CreateRendererImpl(const GSrendererdescription &desc)
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     glEnable(GL_POLYGON_OFFSET_FILL);
 
+    glEnable(GL_SCISSOR_TEST);
+
     memset(p_timerqueries, 0, sizeof(p_timerqueries));
     p_timerindex = 0;
     p_opentimerqueries = 0;
@@ -389,6 +390,11 @@ void xGSImpl::SetViewportImpl(const GSrect &viewport)
         viewport.left, sz.height - viewport.height - viewport.top,
         viewport.width, viewport.height
     );
+
+    glScissor(
+        viewport.left, sz.height - viewport.height - viewport.top,
+        viewport.width, viewport.height
+    );
 }
 
 void xGSImpl::SetStencilReferenceImpl(GSuint ref)
@@ -438,7 +444,7 @@ void xGSImpl::SetUniformValueImpl(GSenum type, GSint location, const void *value
     }
 }
 
-void xGSImpl::SetupGeometryImpl(xGSGeometryImpl *geometry)
+void xGSImpl::SetupGeometryImpl(IxGSGeometryImpl *geometry)
 {
     // set up patch parameters
     if (geometry->type() == GS_PRIM_PATCHES) {
@@ -692,7 +698,7 @@ void xGSImpl::GeometryBufferCommitmentImpl(xGSGeometryBufferImpl *buffer)
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer->indexbuffer());
 }
 
-void xGSImpl::GeometryBufferCommitmentGeometry(xGSGeometryImpl *geometry, GSuint vertexsize, GSuint indexsize, GSbool commit)
+void xGSImpl::GeometryBufferCommitmentGeometry(IxGSGeometryImpl *geometry, GSuint vertexsize, GSuint indexsize, GSbool commit)
 {
     glBufferPageCommitmentARB(
         GL_ARRAY_BUFFER, GLintptr(geometry->vertexPtr()),

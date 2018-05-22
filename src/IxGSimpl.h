@@ -8,7 +8,12 @@
     https://github.com/livingcreative/xgs
 
     IxGSimpl.h
-        xGS API object public interface implementation
+        xGS API objects public interface implementation
+            IxGSDataBuffer
+            IxGSFrameBuffer
+            IxGSGeometryBuffer
+            IxGSInput
+            IxGS
 */
 
 #pragma once
@@ -19,6 +24,74 @@
 namespace xGS
 {
 
+    // data buffer object
+    class IxGSDataBufferImpl : public xGSObjectImpl<xGSDataBufferImpl, IxGSDataBufferImpl>
+    {
+    public:
+        IxGSDataBufferImpl(xGSImpl *owner);
+        ~IxGSDataBufferImpl() override;
+
+    public:
+        GSbool allocate(const GSdatabufferdescription &desc);
+
+    public:
+        GSvalue xGSAPI GetValue(GSenum valuetype) override;
+
+        GSbool xGSAPI Update(GSuint offset, GSuint size, const GSptr data) override;
+        GSbool xGSAPI UpdateBlock(GSuint block, GSuint index, const GSptr data) override;
+        GSbool xGSAPI UpdateValue(GSuint block, GSuint index, GSuint uniform, GSuint uniformindex, GSuint count, const GSptr data) override;
+
+        GSptr  xGSAPI Lock(GSdword access, void *lockdata) override;
+        GSbool xGSAPI Unlock() override;
+    };
+
+    // framebuffer object
+    class IxGSFrameBufferImpl : public xGSObjectImpl<xGSFrameBufferImpl, IxGSFrameBufferImpl>
+    {
+    public:
+        IxGSFrameBufferImpl(xGSImpl *owner);
+        ~IxGSFrameBufferImpl() override;
+
+    public:
+        GSbool allocate(const GSframebufferdescription &desc);
+
+    public:
+        GSvalue xGSAPI GetValue(GSenum valuetype) override;
+
+    private:
+        void checkAttachment(GSenum format, const Attachment &att, bool &incomplete, int &attachments, int &multiampled_attachments, int &srgb_attachments);
+    };
+
+    // geometry buffer object
+    class IxGSGeometryBufferImpl : public xGSObjectImpl<xGSGeometryBufferImpl, IxGSGeometryBufferImpl>
+    {
+    public:
+        IxGSGeometryBufferImpl(xGSImpl *owner);
+        ~IxGSGeometryBufferImpl() override;
+
+    public:
+        GSvalue xGSAPI GetValue(GSenum valuetype) override;
+
+        GSptr   xGSAPI Lock(GSenum locktype, GSdword access, void *lockdata) override;
+        GSbool  xGSAPI Unlock() override;
+
+    public:
+        void BeginImmediateDrawing();
+        void EndImmediateDrawing();
+    };
+
+    // input object
+    class IxGSInputImpl : public xGSObjectImpl<xGSInputImpl, IxGSInputImpl>
+    {
+    public:
+        IxGSInputImpl(xGSImpl *owner);
+        ~IxGSInputImpl() override;
+
+    public:
+        GSbool allocate(const GSinputdescription &desc);
+    };
+
+    // system object
     class IxGSImpl : public xGSImpl
     {
     public:
