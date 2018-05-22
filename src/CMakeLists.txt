@@ -36,12 +36,8 @@ set(HEADERS
 
 	# private source common headers
 	IUnknownImpl.h
-	IxGSgeometrybufferimpl.h
 	IxGSimpl.h
-	xGSgeometry.h
-	xGSgeometrybufferbase.h
 	xGSimplbase.h
-	xGSobject.h
 	xGSutil.h
 )
 
