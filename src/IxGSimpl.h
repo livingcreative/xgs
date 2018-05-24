@@ -119,6 +119,19 @@ namespace xGS
         GSbool allocate(const GSstatedescription &desc);
     };
 
+    // parameters object
+    class IxGSParametersImpl : public xGSObjectImpl<xGSParametersImpl, IxGSParametersImpl>
+    {
+    public:
+        IxGSParametersImpl(xGSImpl *owner);
+        ~IxGSParametersImpl() override;
+
+    public:
+        GSbool allocate(const GSparametersdescription &desc);
+
+        void ReleaseRendererResources();
+    };
+
     // system object
     class IxGSImpl : public xGSImpl
     {

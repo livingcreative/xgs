@@ -14,22 +14,17 @@
 
 #pragma once
 
+#include "xGSimplbase.h"
 #include "xGSutil.h"
 #include "xGSDX11util.h"
-#include <vector>
 
 
 namespace xGS
 {
 
-    class xGSStateImpl;
-    class xGSGeometryBufferImpl;
-    class xGSTextureImpl;
-
-
     // parameters object
     class xGSParametersImpl :
-        public xGSObjectImpl<xGSObjectBase<xGSParameters, xGSImpl>, xGSParametersImpl>,
+        public xGSObjectBase<xGSParametersBase, xGSImpl>,
         public GSParametersState
     {
     public:
@@ -37,18 +32,11 @@ namespace xGS
         ~xGSParametersImpl() override;
 
     public:
-        GSbool allocate(const GSparametersdescription &desc);
+        GSbool AllocateImpl(const GSparametersdescription &desc, const GSParameterSet &set);
 
         void apply(const GScaps &caps);
 
-        xGSStateImpl* state() const { return p_state; }
-        GSuint setindex() const { return p_setindex; }
-
         void ReleaseRendererResources();
-
-    private:
-        xGSStateImpl *p_state;
-        GSuint        p_setindex;
     };
 
 } // namespace xGS

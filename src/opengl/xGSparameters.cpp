@@ -13,58 +13,26 @@
 
 #include "xGSparameters.h"
 #include "xGSstate.h"
-#include "xGSgeometrybuffer.h"
-#include "xGSdatabuffer.h"
-#include "xGStexture.h"
 
 
 using namespace xGS;
-using namespace std;
 
 
 xGSParametersImpl::xGSParametersImpl(xGSImpl *owner) :
-    xGSObjectImpl(owner),
-    p_state(nullptr),
-    p_setindex(GS_UNDEFINED)
-{
-    p_owner->debug(DebugMessageLevel::Information, "Parameters object created\n");
-}
+    xGSObjectBase(owner)
+{}
 
 xGSParametersImpl::~xGSParametersImpl()
-{
-    ReleaseRendererResources();
-    p_owner->debug(DebugMessageLevel::Information, "Parameters object destroyed\n");
-}
+{}
 
-GSbool xGSParametersImpl::allocate(const GSparametersdescription &desc)
+GSbool xGSParametersImpl::AllocateImpl(const GSparametersdescription &desc, const GSParameterSet &set)
 {
     xGSStateImpl *state = static_cast<xGSStateImpl*>(desc.state);
-    if (!state) {
-        return p_owner->error(GSE_INVALIDOBJECT);
-    }
-
-    GSuint setindex = desc.set - GSPS_0;
-    if (setindex >= state->parameterSetCount()) {
-        return p_owner->error(GSE_INVALIDVALUE);
-    }
-
-    const GSParameterSet &set = state->parameterSet(setindex);
-    if (set.settype != GSP_DYNAMIC) {
-        return p_owner->error(GSE_INVALIDVALUE);
-    }
-
     GSerror result = GSParametersState::allocate(
         p_owner, state, set,
         desc.uniforms, desc.textures, desc.constants
     );
-    if (result == GS_OK) {
-        p_state = state;
-        p_state->AddRef();
-
-        p_setindex = setindex;
-    }
-
-    return p_owner->error(result);
+    return result == GS_OK;
 }
 
 void xGSParametersImpl::apply(const GScaps &caps)
@@ -74,10 +42,5 @@ void xGSParametersImpl::apply(const GScaps &caps)
 
 void xGSParametersImpl::ReleaseRendererResources()
 {
-    if (p_state) {
-        p_state->Release();
-        p_state = nullptr;
-    }
-
     GSParametersState::ReleaseRendererResources(p_owner);
 }

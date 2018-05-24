@@ -816,6 +816,58 @@ GSbool IxGSStateImpl::allocate(const GSstatedescription &desc)
 
 
 
+IxGSParametersImpl::IxGSParametersImpl(xGSImpl *owner) :
+    xGSObjectImpl(owner)
+{
+    p_owner->debug(DebugMessageLevel::Information, "Parameters object created\n");
+}
+
+IxGSParametersImpl::~IxGSParametersImpl()
+{
+    ReleaseRendererResources();
+    p_owner->debug(DebugMessageLevel::Information, "Parameters object destroyed\n");
+}
+
+GSbool IxGSParametersImpl::allocate(const GSparametersdescription &desc)
+{
+    xGSStateImpl *state = static_cast<xGSStateImpl*>(desc.state);
+    if (!state) {
+        return p_owner->error(GSE_INVALIDOBJECT);
+    }
+
+    GSuint setindex = desc.set - GSPS_0;
+    if (setindex >= state->parameterSetCount()) {
+        return p_owner->error(GSE_INVALIDVALUE);
+    }
+
+    const GSParameterSet &set = state->parameterSet(setindex);
+    if (set.settype != GSP_DYNAMIC) {
+        return p_owner->error(GSE_INVALIDVALUE);
+    }
+
+    if (!AllocateImpl(desc, set)) {
+        return p_owner->error(GSE_OUTOFRESOURCES);
+    } else {
+        p_state = state;
+        p_state->AddRef();
+
+        p_setindex = setindex;
+    }
+
+    return p_owner->error(GS_OK);
+}
+
+void IxGSParametersImpl::ReleaseRendererResources()
+{
+    if (p_state) {
+        p_state->Release();
+        p_state = nullptr;
+    }
+    xGSParametersImpl::ReleaseRendererResources();
+}
+
+
+
 IxGSImpl::~IxGSImpl()
 {
     // TODO: make internal implementation of these End/Destroy funcs
@@ -898,7 +950,7 @@ GSbool IxGSImpl::CreateObject(GSenum type, const void *desc, void **result)
         GS_CREATE_OBJECT(GS_OBJECTTYPE_FRAMEBUFFER, IxGSFrameBufferImpl, GSframebufferdescription)
         GS_CREATE_OBJECT(GS_OBJECTTYPE_STATE, IxGSStateImpl, GSstatedescription)
         GS_CREATE_OBJECT(GS_OBJECTTYPE_INPUT, IxGSInputImpl, GSinputdescription)
-        GS_CREATE_OBJECT(GS_OBJECTTYPE_PARAMETERS, xGSParametersImpl, GSparametersdescription)
+        GS_CREATE_OBJECT(GS_OBJECTTYPE_PARAMETERS, IxGSParametersImpl, GSparametersdescription)
     }
 
     return error(GSE_INVALIDENUM);

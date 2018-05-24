@@ -29,6 +29,7 @@ namespace xGS
     class xGSInputImpl;
     class xGSTextureImpl;
     class xGSStateImpl;
+    class xGSParametersImpl;
 
     class IxGSGeometryImpl;
     class IxGSGeometryBufferImpl;
@@ -37,7 +38,7 @@ namespace xGS
     class IxGSFrameBufferImpl;
     class IxGSStateImpl;
     class IxGSInputImpl;
-    class xGSParametersImpl;
+    class IxGSParametersImpl;
 
 
     class xGSImplBase : public xGSIUnknownImpl<xGSSystem>
@@ -83,7 +84,7 @@ namespace xGS
         typedef std::unordered_set<IxGSFrameBufferImpl*>    FrameBufferList;
         typedef std::unordered_set<IxGSStateImpl*>          StateList;
         typedef std::unordered_set<IxGSInputImpl*>          InputList;
-        typedef std::unordered_set<xGSParametersImpl*>      ParametersList;
+        typedef std::unordered_set<IxGSParametersImpl*>     ParametersList;
 
         static IxGS            gs;
 
@@ -517,6 +518,21 @@ namespace xGS
 
         // some fixed state common params
         GSbool            p_rasterizerdiscard;
+    };
+
+    // parameters object
+    class xGSParametersBase : public xGSParameters
+    {
+    public:
+        xGSParametersBase();
+
+    public:
+        xGSStateImpl* state() const { return p_state; }
+        GSuint setindex() const { return p_setindex; }
+
+    protected:
+        xGSStateImpl *p_state;
+        GSuint        p_setindex;
     };
 
 } // namespace xGS

@@ -622,6 +622,13 @@ bool xGSStateBase::validate(const GSenum *colorformats, GSenum depthstencilforma
 
 
 
+xGSParametersBase::xGSParametersBase() :
+    p_state(nullptr),
+    p_setindex(0)
+{}
+
+
+
 // xGS system object instance
 IxGS xGSImplBase::gs = nullptr;
 
@@ -748,6 +755,6 @@ GS_ADD_REMOVE_OBJECT_IMPL(p_texturelist, IxGSTextureImpl)
 GS_ADD_REMOVE_OBJECT_IMPL(p_framebufferlist, IxGSFrameBufferImpl)
 GS_ADD_REMOVE_OBJECT_IMPL(p_statelist, IxGSStateImpl)
 GS_ADD_REMOVE_OBJECT_IMPL(p_inputlist, IxGSInputImpl)
-GS_ADD_REMOVE_OBJECT_IMPL(p_parameterslist, xGSParametersImpl)
+GS_ADD_REMOVE_OBJECT_IMPL(p_parameterslist, IxGSParametersImpl)
 
 #undef GS_ADD_REMOVE_OBJECT_IMPL
