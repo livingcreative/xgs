@@ -108,6 +108,17 @@ namespace xGS
         GSbool allocate(const GStexturedescription &desc);
     };
 
+    // state object
+    class IxGSStateImpl : public xGSObjectImpl<xGSStateImpl, IxGSStateImpl>
+    {
+    public:
+        IxGSStateImpl(xGSImpl *owner);
+        ~IxGSStateImpl() override;
+
+    public:
+        GSbool allocate(const GSstatedescription &desc);
+    };
+
     // system object
     class IxGSImpl : public xGSImpl
     {

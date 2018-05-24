@@ -113,7 +113,7 @@ namespace xGS
         };
 
         GSbool GetTextureFormatDescriptor(GSvalue format, TextureFormatDescriptor &descriptor);
-        //const GSpixelformat& DefaultRenderTargetFormat();
+        const GSpixelformat& DefaultRenderTargetFormat();
 
         void UploadBufferData(ID3D12Resource *source, ID3D12Resource *dest, size_t destoffset, size_t destsize);
         void UploadTextureData(ID3D12Resource *source, ID3D12Resource *dest, size_t level, const D3D12_SUBRESOURCE_FOOTPRINT &footprint);

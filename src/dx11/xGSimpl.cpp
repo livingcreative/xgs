@@ -440,10 +440,12 @@ GSbool xGSImpl::GetTextureFormatDescriptor(GSvalue format, TextureFormatDescript
     return GS_TRUE;
 }
 
-//const GSpixelformat& xGSImpl::DefaultRenderTargetFormat()
-//{
-//    TODO
-//}
+const GSpixelformat& xGSImpl::DefaultRenderTargetFormat()
+{
+    // TODO
+    static GSpixelformat result = {};
+    return result;
+}
 
 
 void xGSImpl::AddTextureFormatDescriptor(GSvalue format, GSint bpp, DXGI_FORMAT dxgifmt)

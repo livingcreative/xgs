@@ -589,6 +589,39 @@ xGSTextureBase::xGSTextureBase() :
 }
 
 
+
+xGSStateBase::xGSStateBase() :
+    p_primaryslot(GS_UNDEFINED),
+    p_inputavail(0)
+{}
+
+bool xGSStateBase::validate(const GSenum *colorformats, GSenum depthstencilformat)
+{
+    // TODO: check possibility to NULL rendering destination, if so
+    // null targets should be skipped
+    // also review RT formats matching
+
+    if (!p_rasterizerdiscard) {
+        for (size_t n = 0; n < GS_MAX_FB_COLORTARGETS; ++n) {
+            if (p_colorformats[n] != colorformats[n] && colorformats[n] != GS_COLOR_NONE) {
+                return false;
+            }
+        }
+
+        bool invalidds =
+            p_depthstencilformat != depthstencilformat && depthstencilformat != GS_DEPTH_NONE &&
+            p_depthstencilformat != GS_DEPTH_NONE;
+
+        if (invalidds) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+
+
 // xGS system object instance
 IxGS xGSImplBase::gs = nullptr;
 
@@ -713,7 +746,7 @@ GS_ADD_REMOVE_OBJECT_IMPL(p_geometrybufferlist, IxGSGeometryBufferImpl)
 GS_ADD_REMOVE_OBJECT_IMPL(p_databufferlist, IxGSDataBufferImpl)
 GS_ADD_REMOVE_OBJECT_IMPL(p_texturelist, IxGSTextureImpl)
 GS_ADD_REMOVE_OBJECT_IMPL(p_framebufferlist, IxGSFrameBufferImpl)
-GS_ADD_REMOVE_OBJECT_IMPL(p_statelist, xGSStateImpl)
+GS_ADD_REMOVE_OBJECT_IMPL(p_statelist, IxGSStateImpl)
 GS_ADD_REMOVE_OBJECT_IMPL(p_inputlist, IxGSInputImpl)
 GS_ADD_REMOVE_OBJECT_IMPL(p_parameterslist, xGSParametersImpl)
 

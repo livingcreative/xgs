@@ -655,10 +655,12 @@ GSbool xGSImpl::GetTextureFormatDescriptor(GSvalue format, TextureFormatDescript
     return GS_TRUE;
 }
 
-//const GSpixelformat& xGSImpl::DefaultRenderTargetFormat()
-//{
-//    TODO
-//}
+const GSpixelformat& xGSImpl::DefaultRenderTargetFormat()
+{
+    // TODO
+    static GSpixelformat result = {};
+    return result;
+}
 
 void xGSImpl::UploadBufferData(ID3D12Resource *source, ID3D12Resource *dest, size_t destoffset, size_t destsize)
 {

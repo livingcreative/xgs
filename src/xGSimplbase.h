@@ -17,6 +17,7 @@
 #include "xGS/xGS.h"
 #include "xGSutil.h"
 #include "IUnknownImpl.h"
+#include <vector>
 #include <unordered_set>
 
 
@@ -27,13 +28,14 @@ namespace xGS
     class xGSFrameBufferImpl;
     class xGSInputImpl;
     class xGSTextureImpl;
+    class xGSStateImpl;
 
     class IxGSGeometryImpl;
     class IxGSGeometryBufferImpl;
     class IxGSDataBufferImpl;
     class IxGSTextureImpl;
     class IxGSFrameBufferImpl;
-    class xGSStateImpl;
+    class IxGSStateImpl;
     class IxGSInputImpl;
     class xGSParametersImpl;
 
@@ -79,7 +81,7 @@ namespace xGS
         typedef std::unordered_set<IxGSDataBufferImpl*>     DataBufferList;
         typedef std::unordered_set<IxGSTextureImpl*>        TextureList;
         typedef std::unordered_set<IxGSFrameBufferImpl*>    FrameBufferList;
-        typedef std::unordered_set<xGSStateImpl*>           StateList;
+        typedef std::unordered_set<IxGSStateImpl*>          StateList;
         typedef std::unordered_set<IxGSInputImpl*>          InputList;
         typedef std::unordered_set<xGSParametersImpl*>      ParametersList;
 
@@ -452,6 +454,69 @@ namespace xGS
 #ifdef _DEBUG
         GSuint  p_boundasrt;    // texture currently is render target
 #endif
+    };
+
+    // state object
+    class xGSStateBase : public xGSState
+    {
+    public:
+        xGSStateBase();
+
+    public:
+        struct InputSlot
+        {
+            InputSlot()
+            {}
+
+            InputSlot(const GSvertexcomponent *_decl, GSuint _divisor) :
+                decl(_decl),
+                buffer(nullptr),
+                divisor(_divisor)
+            {}
+
+            GSvertexdecl           decl;
+            xGSGeometryBufferImpl *buffer;
+            GSuint                 divisor;
+        };
+
+        struct ParameterSlot
+        {
+            GSenum type;     // texture slot, uniform constant, uniform block
+            GSint  location; // block index or location
+            GSuint index;    // array index for array uniforms
+        };
+
+    public:
+        GSuint inputCount() const { return GSuint(p_input.size()); }
+        GSuint inputAvailable() const { return p_inputavail; }
+        size_t inputPrimarySlot() const { return p_primaryslot; }
+        const InputSlot& input(size_t index) const { return p_input[index]; }
+
+        GSuint parameterSetCount() const { return GSuint(p_parametersets.size()); }
+        const GSParameterSet& parameterSet(GSuint index) const { return p_parametersets[index]; }
+        const ParameterSlot& parameterSlot(GSuint index) const { return p_parameterslots[index]; }
+
+        bool validate(const GSenum *colorformats, GSenum depthstencilformat);
+
+    protected:
+        typedef std::vector<InputSlot> InputSlotList;
+        typedef std::vector<GSParameterSet> ParamSetList;
+        typedef std::vector<ParameterSlot> ParamSlotList;
+
+    protected:
+        InputSlotList     p_input;
+        size_t            p_primaryslot;
+        GSuint            p_inputavail;
+
+        ParamSetList      p_parametersets;
+        ParamSlotList     p_parameterslots;
+
+        // output RT formats
+        GSenum            p_colorformats[GS_MAX_FB_COLORTARGETS];
+        GSenum            p_depthstencilformat;
+
+        // some fixed state common params
+        GSbool            p_rasterizerdiscard;
     };
 
 } // namespace xGS

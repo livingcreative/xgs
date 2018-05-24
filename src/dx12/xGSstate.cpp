@@ -26,75 +26,27 @@ using namespace std;
 
 
 xGSStateImpl::xGSStateImpl(xGSImpl *owner) :
-    xGSObjectImpl(owner),
+    xGSObjectBase(owner)
     //p_inputlayout(nullptr),
     //p_vs(nullptr),
     //p_ps(nullptr),
-    p_primaryslot(GS_UNDEFINED)
-{
-    p_owner->debug(DebugMessageLevel::Information, "State object created\n");
-}
+{}
 
 xGSStateImpl::~xGSStateImpl()
+{}
+
+GSbool xGSStateImpl::AllocateImpl(const GSstatedescription &desc, GSuint staticinputslots, const GSparameterlayout *staticparams, GSuint staticset)
 {
-    ReleaseRendererResources();
-    p_owner->debug(DebugMessageLevel::Information, "State object destroyed\n");
-}
-
-GSbool xGSStateImpl::allocate(const GSstatedescription &desc)
-{
-    if (!desc.inputlayout) {
-        return p_owner->error(GSE_INVALIDVALUE);
-    }
-
-    if (!desc.parameterlayout) {
-        return p_owner->error(GSE_INVALIDVALUE);
-    }
-
-    // bind input attribute locations & allocate stream slots
-    GSuint staticinputslots = 0;
-    p_input.clear();
-    p_inputavail = 0;
-
     D3D12_INPUT_ELEMENT_DESC inputelements[32];
     UINT inputelementscount = 0;
 
     const GSinputlayout *inputlayout = desc.inputlayout;
     while (inputlayout->slottype != GSI_END) {
-        // bind
-        const GSvertexcomponent *comp = inputlayout->decl;
-        while (comp->type != GSVD_END) {
-            if (comp->name && comp->index != GS_DEFAULT) {
-                // TODO
-            }
-            ++comp;
-        }
-
-        // allocate slot
-        InputSlot slot(inputlayout->decl, inputlayout->divisor);
-        if (inputlayout->divisor == 0) {
-            // TODO: check for only one primary slot
-            p_primaryslot = p_input.size();
-        }
-
         switch (inputlayout->slottype) {
             case GSI_DYNAMIC:
-                ++p_inputavail;
                 break;
 
             case GSI_STATIC: {
-                // assign static geometry buffer source
-                if (inputlayout->buffer == nullptr) {
-                    ReleaseRendererResources();
-                    return p_owner->error(GSE_INVALIDOBJECT);
-                }
-
-                xGSGeometryBufferImpl *buffer =
-                    static_cast<xGSGeometryBufferImpl*>(inputlayout->buffer);
-
-                slot.buffer = buffer;
-                buffer->AddRef();
-
                 const GSvertexcomponent *comp = inputlayout->decl;
                 while (comp->type != GSVD_END) {
                     D3D12_INPUT_ELEMENT_DESC &el = inputelements[inputelementscount];
@@ -120,10 +72,6 @@ GSbool xGSStateImpl::allocate(const GSstatedescription &desc)
                         case GSVD_VEC4:
                             el.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
                             break;
-
-                        default:
-                            // TODO: handle error
-                            break;
                     }
 
                     el.InputSlot = 0;
@@ -132,22 +80,12 @@ GSbool xGSStateImpl::allocate(const GSstatedescription &desc)
                     el.SemanticIndex = inputelementscount;
                     el.SemanticName = "INPUT";
 
-                    ++inputelementscount;
-
                     ++comp;
                 }
 
-                ++staticinputslots;
-
                 break;
             }
-
-            default:
-                ReleaseRendererResources();
-                return p_owner->error(GSE_INVALIDENUM);
         }
-
-        p_input.push_back(slot);
 
         ++inputlayout;
     }
@@ -185,18 +123,6 @@ GSbool xGSStateImpl::allocate(const GSstatedescription &desc)
 
         delete[] feedback;
     }
-
-    //const GSpixelformat &fmt = p_owner->DefaultRenderTargetFormat();
-    GSpixelformat fmt; // TODO
-    for (size_t n = 0; n < GS_MAX_FB_COLORTARGETS; ++n) {
-        p_colorformats[n] =
-            desc.colorformats[n] == GS_COLOR_DEFAULT ?
-                ColorFormatFromPixelFormat(fmt) :
-                desc.colorformats[n];
-    }
-    p_depthstencilformat = desc.depthstencilformat == GS_DEPTH_DEFAULT ?
-        DepthFormatFromPixelFormat(fmt) :
-        desc.depthstencilformat;
 
     // TODO: shader code
 
@@ -432,27 +358,6 @@ int xGSStateImpl::attribLocation(const char *name) const
 {
     // TODO
     return 0;
-}
-
-bool xGSStateImpl::validate(const GSenum *colorformats, GSenum depthstencilformat)
-{
-    // TODO: check possibility to NULL rendering destination, if so
-    // null targets should be skipped
-    // also review RT formats matching
-
-    if (!p_rasterizerdiscard) {
-        for (size_t n = 0; n < GS_MAX_FB_COLORTARGETS; ++n) {
-            if (p_colorformats[n] != colorformats[n] && colorformats[n] != GS_COLOR_NONE) {
-                return false;
-            }
-        }
-
-        if (p_depthstencilformat != depthstencilformat && depthstencilformat != GS_DEPTH_NONE && p_depthstencilformat != GS_DEPTH_NONE) {
-            return false;
-        }
-    }
-
-    return true;
 }
 
 void xGSStateImpl::apply(const GScaps &caps)

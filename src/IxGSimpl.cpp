@@ -657,6 +657,165 @@ GSbool IxGSTextureImpl::allocate(const GStexturedescription &desc)
 
 
 
+IxGSStateImpl::IxGSStateImpl(xGSImpl *owner) :
+    xGSObjectImpl(owner)
+{
+    p_owner->debug(DebugMessageLevel::Information, "State object created\n");
+}
+
+IxGSStateImpl::~IxGSStateImpl()
+{
+    ReleaseRendererResources();
+    p_owner->debug(DebugMessageLevel::Information, "State object destroyed\n");
+}
+
+GSbool IxGSStateImpl::allocate(const GSstatedescription &desc)
+{
+    if (!desc.inputlayout) {
+        return p_owner->error(GSE_INVALIDVALUE);
+    }
+
+    if (!desc.parameterlayout) {
+        return p_owner->error(GSE_INVALIDVALUE);
+    }
+
+    // allocate stream slots
+    GSuint staticinputslots = 0;
+    p_input.clear();
+    p_inputavail = 0;
+
+    const GSinputlayout *inputlayout = desc.inputlayout;
+    while (inputlayout->slottype != GSI_END) {
+        // allocate slot
+        InputSlot slot(inputlayout->decl, inputlayout->divisor);
+        if (inputlayout->divisor == 0) {
+            // TODO: check for only one primary slot
+            p_primaryslot = p_input.size();
+        }
+
+        switch (inputlayout->slottype) {
+            case GSI_DYNAMIC:
+                ++p_inputavail;
+                break;
+
+            case GSI_STATIC: {
+                // assign static geometry buffer source
+                if (inputlayout->buffer == nullptr) {
+                    return p_owner->error(GSE_INVALIDOBJECT);
+                }
+
+                xGSGeometryBufferImpl *buffer =
+                    static_cast<xGSGeometryBufferImpl*>(inputlayout->buffer);
+
+                slot.buffer = buffer;
+                buffer->AddRef();
+
+                ++staticinputslots;
+
+                break;
+            }
+
+            default:
+                return p_owner->error(GSE_INVALIDENUM);
+        }
+
+        p_input.push_back(slot);
+
+        ++inputlayout;
+    }
+
+    // gather parameters info
+    p_parametersets.clear();
+    p_parameterslots.clear();
+
+    GSuint currenttextureslot = 0;
+
+    const GSparameterlayout *staticparams = nullptr;
+    GSuint staticset = GS_DEFAULT;
+
+    const GSparameterlayout *paramset = desc.parameterlayout;
+    while (paramset->settype != GSP_END) {
+        GSParameterSet set = {
+            paramset->settype,
+            GSuint(p_parameterslots.size()),
+            GSuint(p_parameterslots.size()),
+            currenttextureslot,
+            currenttextureslot,
+            0
+        };
+
+        const GSparameterdecl *param = paramset->parameters;
+        while (param->type != GSPD_END) {
+            ParameterSlot slot = {
+                param->type,
+                GS_DEFAULT,
+                param->index
+            };
+
+            switch (param->type) {
+                case GSPD_CONSTANT:
+                    slot.location = param->location;
+                    ++set.constantcount;
+                    break;
+
+                case GSPD_BLOCK:
+                    slot.location = param->location;
+                    break;
+
+                case GSPD_TEXTURE: {
+                    // TODO: this was incremented only when texture location was allocated in the shader source
+                    //       before common code pull out refactoring
+                    if (param->location != GS_DEFAULT) {
+                        slot.location = currenttextureslot - set.firstsampler;
+
+                        ++currenttextureslot;
+                        ++set.onepastlastsampler;
+                    }
+                    break;
+                }
+
+                default:
+                    return p_owner->error(GSE_INVALIDENUM);
+            }
+
+            p_parameterslots.push_back(slot);
+
+            ++set.onepastlast;
+
+            ++param;
+        }
+
+        if (paramset->settype == GSP_STATIC) {
+            staticparams = paramset;
+            staticset = GSuint(p_parametersets.size());
+        }
+
+        p_parametersets.push_back(set);
+
+        ++paramset;
+    }
+
+    // set output formats
+    const GSpixelformat &fmt = p_owner->DefaultRenderTargetFormat();
+    for (size_t n = 0; n < GS_MAX_FB_COLORTARGETS; ++n) {
+        p_colorformats[n] =
+            desc.colorformats[n] == GS_COLOR_DEFAULT ?
+            ColorFormatFromPixelFormat(fmt) :
+            desc.colorformats[n];
+    }
+    p_depthstencilformat = desc.depthstencilformat == GS_DEPTH_DEFAULT ?
+        DepthFormatFromPixelFormat(fmt) :
+        desc.depthstencilformat;
+
+    if (!AllocateImpl(desc, staticinputslots, staticparams, staticset)) {
+        return p_owner->error(GSE_OUTOFRESOURCES);
+    }
+
+    return p_owner->error(GS_OK);
+}
+
+
+
 IxGSImpl::~IxGSImpl()
 {
     // TODO: make internal implementation of these End/Destroy funcs
@@ -737,7 +896,7 @@ GSbool IxGSImpl::CreateObject(GSenum type, const void *desc, void **result)
         GS_CREATE_OBJECT(GS_OBJECTTYPE_DATABUFFER, IxGSDataBufferImpl, GSdatabufferdescription)
         GS_CREATE_OBJECT(GS_OBJECTTYPE_TEXTURE, IxGSTextureImpl, GStexturedescription)
         GS_CREATE_OBJECT(GS_OBJECTTYPE_FRAMEBUFFER, IxGSFrameBufferImpl, GSframebufferdescription)
-        GS_CREATE_OBJECT(GS_OBJECTTYPE_STATE, xGSStateImpl, GSstatedescription)
+        GS_CREATE_OBJECT(GS_OBJECTTYPE_STATE, IxGSStateImpl, GSstatedescription)
         GS_CREATE_OBJECT(GS_OBJECTTYPE_INPUT, IxGSInputImpl, GSinputdescription)
         GS_CREATE_OBJECT(GS_OBJECTTYPE_PARAMETERS, xGSParametersImpl, GSparametersdescription)
     }

@@ -112,7 +112,7 @@ namespace xGS
         };
 
         GSbool GetTextureFormatDescriptor(GSvalue format, TextureFormatDescriptor &descriptor);
-        //const GSpixelformat& DefaultRenderTargetFormat();
+        const GSpixelformat& DefaultRenderTargetFormat();
 
     private:
         void AddTextureFormatDescriptor(GSvalue format, GSint bpp, DXGI_FORMAT dxgifmt);

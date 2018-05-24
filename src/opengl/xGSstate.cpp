@@ -22,40 +22,21 @@ using namespace std;
 
 
 xGSStateImpl::xGSStateImpl(xGSImpl *owner) :
-    xGSObjectImpl(owner),
+    xGSObjectBase(owner),
     p_program(0),
-    p_vao(0),
-    p_primaryslot(GS_UNDEFINED)
-{
-    p_owner->debug(DebugMessageLevel::Information, "State object created\n");
-}
+    p_vao(0)
+{}
 
 xGSStateImpl::~xGSStateImpl()
+{}
+
+GSbool xGSStateImpl::AllocateImpl(const GSstatedescription &desc, GSuint staticinputslots, const GSparameterlayout *staticparams, GSuint staticset)
 {
-    ReleaseRendererResources();
-    p_owner->debug(DebugMessageLevel::Information, "State object destroyed\n");
-}
-
-GSbool xGSStateImpl::allocate(const GSstatedescription &desc)
-{
-    if (!desc.inputlayout) {
-        return p_owner->error(GSE_INVALIDVALUE);
-    }
-
-    if (!desc.parameterlayout) {
-        return p_owner->error(GSE_INVALIDVALUE);
-    }
-
     p_program = glCreateProgram();
 
-    // bind input attribute locations & allocate stream slots
-    GSuint staticinputslots = 0;
-    p_input.clear();
-    p_inputavail = 0;
-
+    // bind input attribute locations
     const GSinputlayout *inputlayout = desc.inputlayout;
     while (inputlayout->slottype != GSI_END) {
-        // bind
         const GSvertexcomponent *comp = inputlayout->decl;
         while (comp->type != GSVD_END) {
             if (comp->name && comp->index != GS_DEFAULT) {
@@ -63,44 +44,6 @@ GSbool xGSStateImpl::allocate(const GSstatedescription &desc)
             }
             ++comp;
         }
-
-        // allocate slot
-        InputSlot slot(inputlayout->decl, inputlayout->divisor);
-        if (inputlayout->divisor == 0) {
-            // TODO: check for only one primary slot
-            p_primaryslot = p_input.size();
-        }
-
-        switch (inputlayout->slottype) {
-            case GSI_DYNAMIC:
-                ++p_inputavail;
-                break;
-
-            case GSI_STATIC: {
-                // assign static geometry buffer source
-                if (inputlayout->buffer == nullptr) {
-                    ReleaseRendererResources();
-                    return p_owner->error(GSE_INVALIDOBJECT);
-                }
-
-                xGSGeometryBufferImpl *buffer =
-                    static_cast<xGSGeometryBufferImpl*>(inputlayout->buffer);
-
-                slot.buffer = buffer;
-                buffer->AddRef();
-
-                ++staticinputslots;
-
-                break;
-            }
-
-            default:
-                ReleaseRendererResources();
-                return p_owner->error(GSE_INVALIDENUM);
-        }
-
-        p_input.push_back(slot);
-
         ++inputlayout;
     }
 
@@ -141,17 +84,6 @@ GSbool xGSStateImpl::allocate(const GSstatedescription &desc)
         delete[] feedback;
     }
 
-    const GSpixelformat &fmt = p_owner->DefaultRenderTargetFormat();
-    for (size_t n = 0; n < GS_MAX_FB_COLORTARGETS; ++n) {
-        p_colorformats[n] =
-            desc.colorformats[n] == GS_COLOR_DEFAULT ?
-                ColorFormatFromPixelFormat(fmt) :
-                desc.colorformats[n];
-    }
-    p_depthstencilformat = desc.depthstencilformat == GS_DEPTH_DEFAULT ?
-        DepthFormatFromPixelFormat(fmt) :
-        desc.depthstencilformat;
-
     // attach shader sources
     std::vector<GLuint> shaders;
 
@@ -191,56 +123,31 @@ GSbool xGSStateImpl::allocate(const GSstatedescription &desc)
 
 
     // gather parameters info
-    p_parametersets.clear();
-    p_parameterslots.clear();
-
+    GSuint currentslot = 0;
     GSuint currenttextureslot = 0;
 
     const GSparameterlayout *paramset = desc.parameterlayout;
     while (paramset->settype != GSP_END) {
-        GSParameterSet set = {
-            paramset->settype,
-            GSuint(p_parameterslots.size()),
-            GSuint(p_parameterslots.size()),
-            currenttextureslot,
-            currenttextureslot,
-            0
-        };
-
         const GSparameterdecl *param = paramset->parameters;
         while (param->type != GSPD_END) {
-            ParameterSlot slot = {
-                param->type,
-                GS_DEFAULT,
-                param->index
-            };
-
-            switch (param->type) {
+            auto &slot = p_parameterslots[currentslot++];
+            switch (slot.type) {
                 case GSPD_CONSTANT:
-                    slot.location = param->location == GS_DEFAULT ?
-                        glGetUniformLocation(p_program, param->name) : param->location;
                     if (slot.location == GS_DEFAULT) {
-                        p_owner->debug(DebugMessageLevel::Warning, "Requested parameter \"%s\" not found in program parameters\n", param->name);
+                        slot.location = glGetUniformLocation(p_program, param->name);
                     }
-                    ++set.constantcount;
                     break;
 
                 case GSPD_BLOCK:
-                    slot.location = param->location == GS_DEFAULT ?
-                        glGetUniformBlockIndex(p_program, param->name) : param->location;
                     if (slot.location == GS_DEFAULT) {
-                        p_owner->debug(DebugMessageLevel::Warning, "Requested parameter \"%s\" not found in program parameters\n", param->name);
+                        slot.location = glGetUniformBlockIndex(p_program, param->name);
                     }
                     break;
 
                 case GSPD_TEXTURE: {
                     GSint location = param->location == GS_DEFAULT ?
                         glGetUniformLocation(p_program, param->name) : param->location;
-                    if (location == GS_DEFAULT) {
-                        p_owner->debug(DebugMessageLevel::Warning, "Requested parameter \"%s\" not found in program parameters\n", param->name);
-                    } else {
-                        slot.location = currenttextureslot - set.firstsampler;
-
+                    if (location != GS_DEFAULT) {
                         // TODO: be sure that glProgramUniform1i available
                         glProgramUniform1i(p_program, location + param->index, currenttextureslot);
 
@@ -249,37 +156,28 @@ GSbool xGSStateImpl::allocate(const GSstatedescription &desc)
                             "Program texture slot \"%s\" with location %i got texture slot #%i\n",
                             param->name, location + param->index, currenttextureslot
                         );
-
                         ++currenttextureslot;
-                        ++set.onepastlastsampler;
                     }
                     break;
                 }
-
-                default:
-                    ReleaseRendererResources();
-                    return p_owner->error(GSE_INVALIDENUM);
             }
 
-            p_parameterslots.push_back(slot);
-
-            ++set.onepastlast;
+            if (slot.location == GS_DEFAULT) {
+                p_owner->debug(DebugMessageLevel::Warning, "Requested parameter \"%s\" not found in program parameters\n", param->name);
+            }
 
             ++param;
         }
-
-        p_parametersets.push_back(set);
-
-        if (paramset->settype == GSP_STATIC) {
-            // bind static parameters
-            // TODO: failure handling
-            p_staticstate.allocate(
-                p_owner, this, set,
-                paramset->uniforms, paramset->textures, nullptr
-            );
-        }
-
         ++paramset;
+    }
+
+    if (staticparams) {
+        // bind static parameters
+        // TODO: failure handling
+        p_staticstate.allocate(
+            p_owner, this, p_parametersets[staticset],
+            staticparams->uniforms, staticparams->textures, nullptr
+        );
     }
 
     // allocate input streams
@@ -359,27 +257,6 @@ GSbool xGSStateImpl::allocate(const GSstatedescription &desc)
 GLint xGSStateImpl::attribLocation(const char *name) const
 {
     return glGetAttribLocation(p_program, name);
-}
-
-bool xGSStateImpl::validate(const GSenum *colorformats, GSenum depthstencilformat)
-{
-    // TODO: check possibility to NULL rendering destination, if so
-    // null targets should be skipped
-    // also review RT formats matching
-
-    if (!p_rasterizerdiscard) {
-        for (size_t n = 0; n < GS_MAX_FB_COLORTARGETS; ++n) {
-            if (p_colorformats[n] != colorformats[n] && colorformats[n] != GS_COLOR_NONE) {
-                return false;
-            }
-        }
-
-        if (p_depthstencilformat != depthstencilformat && depthstencilformat != GS_DEPTH_NONE && p_depthstencilformat != GS_DEPTH_NONE) {
-            return false;
-        }
-    }
-
-    return true;
 }
 
 void xGSStateImpl::setarrays(const GSvertexdecl &decl, GSuint divisor, GSptr vertexptr) const
