@@ -117,67 +117,6 @@ namespace xGS
 #endif
     };
 
-    template <typename T, typename implT>
-    class xGSObjectBase : public xGSIUnknownImpl<T>
-    {
-    public:
-        typedef implT impl_t;
-
-        xGSObjectBase() :
-            p_objecttype(GS_NONE),
-            p_owner(nullptr)
-        {}
-
-        xGSObjectBase(implT *owner) :
-            p_objecttype(GS_NONE),
-            p_owner(owner)
-        {}
-
-        ~xGSObjectBase() override
-        {}
-
-        void DetachFromRenderer()
-        {
-            p_owner = nullptr;
-        }
-
-        GSenum objecttype() const { return p_objecttype; }
-
-    protected:
-        GSenum  p_objecttype;
-        implT  *p_owner;
-    };
-
-    template <typename baseT, typename selfT>
-    class xGSObjectImpl : public baseT
-    {
-    public:
-        xGSObjectImpl(typename baseT::impl_t *owner) :
-            baseT(owner)
-        {
-            p_owner = owner;
-            p_owner->AddObject(static_cast<selfT*>(this));
-        }
-
-        ~xGSObjectImpl() override
-        {
-            if (p_owner) {
-                p_owner->RemoveObject(static_cast<selfT*>(this));
-            }
-        }
-
-        static selfT* create(typename baseT::impl_t *owner, GSenum type)
-        {
-            selfT *result = new selfT(owner);
-            result->p_objecttype = type;
-            result->AddRef();
-            return result;
-        }
-    };
-
-    class xGSUnknownObjectImpl : public xGSObjectImpl<xGSObjectBase<xGSObject, xGSImplBase>, xGSUnknownObjectImpl>
-    {};
-
     // data buffer object base class
     class xGSDataBufferBase : public xGSDataBuffer
     {
@@ -263,68 +202,6 @@ namespace xGS
 
         Attachment p_colortextures[GS_MAX_FB_COLORTARGETS];
         Attachment p_depthtexture;
-    };
-
-    // geometry object
-    class IxGSGeometryImpl : public xGSObjectImpl<xGSObjectBase<xGSGeometry, xGSImplBase>, IxGSGeometryImpl>
-    {
-    public:
-        IxGSGeometryImpl(xGSImplBase *owner);
-        ~IxGSGeometryImpl() override;
-
-        // IxGSGeometry interface
-    public:
-        GSvalue xGSAPI GetValue(GSenum valuetype) override;
-
-        GSptr   xGSAPI Lock(GSenum locktype, GSdword access, void *lockdata) override;
-        GSbool  xGSAPI Unlock() override;
-
-        // internal public interface
-    public:
-        GSbool allocate(const GSgeometrydescription &desc);
-
-        GSenum                  type() const { return p_type; }
-        GSuint                  patchvertices() const { return p_patch_vertices; }
-        GSbool                  restart() const { return p_restart; }
-        GSuint                  restartindex() const { return p_restartindex; }
-        GSenum                  indexFormat() const { return p_indexformat; }
-        GSint                   vertexCount() const { return p_vertexcount; }
-        GSint                   indexCount() const { return p_indexcount; }
-        GSuint                  patchVertices() const { return p_patch_vertices; }
-        const GSptr             vertexPtr() const { return p_vertexmemory; }
-        const GSptr             indexPtr() const { return p_indexmemory; }
-        xGSGeometryBufferImpl*  buffer() const { return p_buffer; }
-        GSuint                  baseVertex() const { return p_basevertex; }
-
-        void ReleaseRendererResources()
-        {
-            // nothing to release
-            // TODO: check for shared geometry refcount here, does it need to be decremented?
-        }
-
-        // internal functions
-    protected:
-        bool checkAlloc(GSenum indexformat/*, GSenum sharemode*/);
-        void doUnlock();
-
-    private:
-        GSenum                  p_type;         // primitive type
-        GSenum                  p_indexformat;  // index format
-        GSint                   p_vertexcount;
-        GSint                   p_indexcount;
-        GSuint                  p_patch_vertices;
-        GSbool                  p_restart;
-        GSuint                  p_restartindex;
-
-        GSenum                  p_locktype;     // lock type (none, vertices, indices)
-        GSptr                   p_lockpointer;  // current lock ptr (nullptr if there's no lock)
-
-        GSuint                  p_basevertex;   // base vertex in buffer
-        GSptr                   p_vertexmemory; // starting vertex pointer (offset inside buffer or own memory)
-        GSptr                   p_indexmemory;  // starting index pointer (offset inside buffer or own memory)
-
-        IxGSGeometryImpl       *p_sharedgeometry;
-        xGSGeometryBufferImpl  *p_buffer;       // buffer in which geometry is allocated
     };
 
     // geometry buffer object
@@ -533,6 +410,135 @@ namespace xGS
     protected:
         xGSStateImpl *p_state;
         GSuint        p_setindex;
+    };
+
+
+    // generic object base
+    template <typename T, typename implT>
+    class xGSObjectBase : public xGSIUnknownImpl<T>
+    {
+    public:
+        typedef implT impl_t;
+
+        xGSObjectBase() :
+            p_objecttype(GS_NONE),
+            p_owner(nullptr)
+        {}
+
+        xGSObjectBase(implT *owner) :
+            p_objecttype(GS_NONE),
+            p_owner(owner)
+        {}
+
+        ~xGSObjectBase() override
+        {}
+
+        void DetachFromRenderer()
+        {
+            p_owner = nullptr;
+        }
+
+        GSenum objecttype() const { return p_objecttype; }
+
+    protected:
+        GSenum  p_objecttype;
+        implT  *p_owner;
+    };
+
+    // generic object implementation
+    template <typename baseT, typename selfT>
+    class xGSObjectImpl : public baseT
+    {
+    public:
+        xGSObjectImpl(typename baseT::impl_t *owner) :
+            baseT(owner)
+        {
+            p_owner = owner;
+            p_owner->AddObject(static_cast<selfT*>(this));
+        }
+
+        ~xGSObjectImpl() override
+        {
+            if (p_owner) {
+                p_owner->RemoveObject(static_cast<selfT*>(this));
+            }
+        }
+
+        // TODO: is it possible to tie type as template static parameter?
+        static selfT* create(typename baseT::impl_t *owner, GSenum type)
+        {
+            selfT *result = new selfT(owner);
+            result->p_objecttype = type;
+            result->AddRef();
+            return result;
+        }
+    };
+
+
+    // base (unknown) object implementation
+    class xGSUnknownObjectImpl : public xGSObjectImpl<xGSObjectBase<xGSObject, xGSBase>, xGSUnknownObjectImpl>
+    {};
+
+    // geometry object implementation
+    class IxGSGeometryImpl : public xGSObjectImpl<xGSObjectBase<xGSGeometry, xGSBase>, IxGSGeometryImpl>
+    {
+    public:
+        IxGSGeometryImpl(xGSBase *owner);
+        ~IxGSGeometryImpl() override;
+
+        // IxGSGeometry interface
+    public:
+        GSvalue xGSAPI GetValue(GSenum valuetype) override;
+
+        GSptr   xGSAPI Lock(GSenum locktype, GSdword access, void *lockdata) override;
+        GSbool  xGSAPI Unlock() override;
+
+        // internal public interface
+    public:
+        GSbool allocate(const GSgeometrydescription &desc);
+
+        GSenum                  type() const { return p_type; }
+        GSuint                  patchvertices() const { return p_patch_vertices; }
+        GSbool                  restart() const { return p_restart; }
+        GSuint                  restartindex() const { return p_restartindex; }
+        GSenum                  indexFormat() const { return p_indexformat; }
+        GSint                   vertexCount() const { return p_vertexcount; }
+        GSint                   indexCount() const { return p_indexcount; }
+        GSuint                  patchVertices() const { return p_patch_vertices; }
+        const GSptr             vertexPtr() const { return p_vertexmemory; }
+        const GSptr             indexPtr() const { return p_indexmemory; }
+        xGSGeometryBufferImpl*  buffer() const { return p_buffer; }
+        GSuint                  baseVertex() const { return p_basevertex; }
+
+        void ReleaseRendererResources()
+        {
+            // nothing to release
+            // TODO: check for shared geometry refcount here, does it need to be decremented?
+        }
+
+        // internal functions
+    protected:
+        bool checkAlloc(GSenum indexformat/*, GSenum sharemode*/);
+        void doUnlock();
+
+    private:
+        GSenum                  p_type;         // primitive type
+        GSenum                  p_indexformat;  // index format
+        GSint                   p_vertexcount;
+        GSint                   p_indexcount;
+        GSuint                  p_patch_vertices;
+        GSbool                  p_restart;
+        GSuint                  p_restartindex;
+
+        GSenum                  p_locktype;     // lock type (none, vertices, indices)
+        GSptr                   p_lockpointer;  // current lock ptr (nullptr if there's no lock)
+
+        GSuint                  p_basevertex;   // base vertex in buffer
+        GSptr                   p_vertexmemory; // starting vertex pointer (offset inside buffer or own memory)
+        GSptr                   p_indexmemory;  // starting index pointer (offset inside buffer or own memory)
+
+        IxGSGeometryImpl       *p_sharedgeometry;
+        xGSGeometryBufferImpl  *p_buffer;       // buffer in which geometry is allocated
     };
 
 } // namespace xGS
