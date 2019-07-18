@@ -41,11 +41,11 @@ namespace xGS
     class IxGSParametersImpl;
 
 
-    class xGSImplBase : public xGSIUnknownImpl<xGSSystem>
+    class xGSBase : public xGSIUnknownImpl<xGSSystem>
     {
     public:
-        xGSImplBase();
-        ~xGSImplBase() override;
+        xGSBase();
+        ~xGSBase() override;
 
     public:
         // TODO: make GScaps common for all platforms

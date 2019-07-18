@@ -27,7 +27,7 @@ namespace xGS
     class xGSTextureImpl;
 
 
-    class xGSImpl : public xGSImplBase
+    class xGSImpl : public xGSBase
     {
     public:
         xGSImpl();

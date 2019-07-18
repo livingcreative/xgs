@@ -51,7 +51,7 @@ void CALLBACK errorCallback(GLenum source, GLenum type, GLuint id, GLenum severi
 #endif
 
 xGSImpl::xGSImpl() :
-    xGSImplBase(),
+    xGSBase(),
     p_context(new xGScontext())
 {
     p_error = p_context->Initialize();

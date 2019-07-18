@@ -113,7 +113,7 @@ void xGSFrameBufferBase::Attachment::attach(xGSTextureImpl *texture, GSuint leve
 
 
 
-IxGSGeometryImpl::IxGSGeometryImpl(xGSImplBase *owner) :
+IxGSGeometryImpl::IxGSGeometryImpl(xGSBase *owner) :
     xGSObjectImpl(owner),
 
     p_type(GS_NONE),
@@ -630,10 +630,10 @@ xGSParametersBase::xGSParametersBase() :
 
 
 // xGS system object instance
-IxGS xGSImplBase::gs = nullptr;
+IxGS xGSBase::gs = nullptr;
 
 
-xGSImplBase::xGSImplBase() :
+xGSBase::xGSBase() :
     p_systemstate(SYSTEM_NOTREADY),
 
     p_geometrylist(),
@@ -660,12 +660,12 @@ xGSImplBase::xGSImplBase() :
 #endif
 }
 
-xGSImplBase::~xGSImplBase()
+xGSBase::~xGSBase()
 {
     gs = nullptr;
 }
 
-GSptr xGSImplBase::allocate(GSuint size)
+GSptr xGSBase::allocate(GSuint size)
 {
 #if defined(_DEBUG) || defined(DEBUG)
     dbg_memory_allocs += size;
@@ -673,7 +673,7 @@ GSptr xGSImplBase::allocate(GSuint size)
     return malloc(size_t(size));
 }
 
-void xGSImplBase::free(GSptr &memory)
+void xGSBase::free(GSptr &memory)
 {
 #if defined(_DEBUG) || defined(DEBUG)
     dbg_memory_allocs -= GSuint(_msize(memory));
@@ -682,7 +682,7 @@ void xGSImplBase::free(GSptr &memory)
     memory = nullptr;
 }
 
-bool xGSImplBase::error(GSerror code, DebugMessageLevel level)
+bool xGSBase::error(GSerror code, DebugMessageLevel level)
 {
     p_error = code;
     if (p_error != GS_OK) {
@@ -696,7 +696,7 @@ bool xGSImplBase::error(GSerror code, DebugMessageLevel level)
     return code == GS_OK;
 }
 
-void xGSImplBase::debug(DebugMessageLevel level, const char *format, ...)
+void xGSBase::debug(DebugMessageLevel level, const char *format, ...)
 {
 #ifdef _DEBUG
     va_list args;
@@ -738,12 +738,12 @@ void xGSImplBase::debug(DebugMessageLevel level, const char *format, ...)
 }
 
 #define GS_ADD_REMOVE_OBJECT_IMPL(list, type)\
-template <> void xGSImplBase::AddObject(type *object)\
+template <> void xGSBase::AddObject(type *object)\
 {\
     list.insert(object);\
 }\
 \
-template <> void xGSImplBase::RemoveObject(type *object)\
+template <> void xGSBase::RemoveObject(type *object)\
 {\
     list.erase(object);\
 }

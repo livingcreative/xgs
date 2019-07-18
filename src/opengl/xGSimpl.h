@@ -29,7 +29,7 @@ namespace xGS
     class xGScontextCreator;
 
 
-    class xGSImpl : public xGSImplBase
+    class xGSImpl : public xGSBase
     {
     public:
         xGSImpl();

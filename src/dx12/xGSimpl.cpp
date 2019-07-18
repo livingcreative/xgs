@@ -28,7 +28,7 @@ using namespace xGS;
 
 
 xGSImpl::xGSImpl() :
-    xGSImplBase(),
+    xGSBase(),
     p_swapchain(nullptr),
     p_device(nullptr),
     p_fence(nullptr),
